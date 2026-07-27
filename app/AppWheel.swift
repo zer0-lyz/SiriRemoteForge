@@ -36,6 +36,11 @@ final class AppWheelModel: ObservableObject {
     /// Drives the summon animation; set once the window is on screen so the wheel grows into place.
     @Published var presented = false
 
+    /// Smoothed clockwise-from-top angle used only for remote-touch app selection. The Siri Remote
+    /// ring is tiny; mapping every raw frame directly to a sector makes the highlight chatter at
+    /// sector boundaries. A little smoothing + hysteresis makes it feel like an intentional dial.
+    private var remoteTouchAngle: Double?
+
     func setHighlight(_ index: Int?) {
         highlighted = index
         guard let index = index, !apps.isEmpty else { return }
@@ -44,6 +49,81 @@ final class AppWheelModel: ObservableObject {
         while target - wedgeAngle > .pi { target -= 2 * .pi }
         while wedgeAngle - target > .pi { target += 2 * .pi }
         wedgeAngle = target
+    }
+
+    /// Keyboard/remote driven selection. The radial menu was originally cursor-first; this keeps
+    /// that behaviour, but also lets a Siri Remote ring step through apps without moving the mouse.
+    func stepHighlight(_ delta: Int) {
+        guard !apps.isEmpty else { return }
+        let current = highlighted ?? (delta >= 0 ? -1 : apps.count)
+        let next = (current + delta + apps.count) % apps.count
+        setHighlight(next)
+    }
+
+    /// Pick the app nearest a physical ring direction. Unlike continuous touch tracking this is a
+    /// single decisive selection, so the tiny Siri Remote pad cannot jitter between neighbouring
+    /// sectors.
+    func setHighlightForRemoteDirection(_ direction: SwipeDirection) {
+        let point: CGPoint
+        switch direction {
+        case .up:    point = CGPoint(x: 0.5, y: 1.0)
+        case .right: point = CGPoint(x: 1.0, y: 0.5)
+        case .down:  point = CGPoint(x: 0.5, y: 0.0)
+        case .left:  point = CGPoint(x: 0.0, y: 0.5)
+        }
+        setHighlightFromRemoteTouch(point)
+    }
+
+    /// Select by absolute position on the Siri Remote touch surface. `normalized` is 0...1 in both
+    /// axes with y increasing toward the top of the pad. This makes the remote's touch ring behave
+    /// like a tiny version of the on-screen app wheel: touch left → left app, touch top → top app.
+    func setHighlightFromRemoteTouch(_ normalized: CGPoint) {
+        guard !apps.isEmpty else { return }
+        let offset = CGPoint(x: normalized.x - 0.5, y: normalized.y - 0.5)
+        let radius = hypot(offset.x, offset.y)
+
+        // Two radii, not one: enter selection only when clearly on the outer ring, but once a
+        // selection exists do not drop it until the finger comes well back toward the centre. This
+        // prevents the "blink to no selection" feeling from ordinary thumb wobble.
+        let selectRadius: CGFloat = 0.30
+        let clearRadius: CGFloat = 0.18
+        if radius < clearRadius {
+            remoteTouchAngle = nil
+            setHighlight(nil)
+            return
+        }
+        if highlighted == nil && radius < selectRadius { return }
+
+        let step = 2 * Double.pi / Double(apps.count)
+        var raw = Double.pi / 2 - atan2(Double(offset.y), Double(offset.x))
+        if raw < 0 { raw += 2 * .pi }
+
+        // Smooth the angle without taking the long way around 0/2π.
+        let alpha = 0.28
+        let angle: Double
+        if let previous = remoteTouchAngle {
+            var adjusted = raw
+            while adjusted - previous > .pi { adjusted -= 2 * .pi }
+            while previous - adjusted > .pi { adjusted += 2 * .pi }
+            angle = previous + (adjusted - previous) * alpha
+        } else {
+            angle = raw
+        }
+        remoteTouchAngle = angle
+
+        var wrapped = angle.truncatingRemainder(dividingBy: 2 * .pi)
+        if wrapped < 0 { wrapped += 2 * .pi }
+        let proposed = Int((wrapped + step / 2) / step) % apps.count
+
+        // Sector hysteresis. If the current sector is still plausibly under the thumb, keep it;
+        // only switch after the touch has moved clearly into the neighbouring sector.
+        if let current = highlighted, current != proposed {
+            let currentCentre = Double(current) * step
+            let d = Self.angularDistance(wrapped, currentCentre)
+            if d < step * 0.62 { return }
+        }
+
+        setHighlight(proposed)
     }
 
     /// A committed pick that isn't installed: name it as unavailable and drop the highlight, so the
@@ -58,6 +138,7 @@ final class AppWheelModel: ObservableObject {
         highlighted = nil
         failure = nil
         wedgeAngle = .pi / 2
+        remoteTouchAngle = nil
     }
 
     /// Wheel geometry, in points. `deadZone` is the radius inside which nothing is selected.
@@ -68,6 +149,12 @@ final class AppWheelModel: ObservableObject {
     /// silhouette alone, without having to compare shades of fill.
     let highlightBulge: CGFloat = 7
     var side: CGFloat { (outerRadius + highlightBulge) * 2 + 8 }
+
+    private static func angularDistance(_ a: Double, _ b: Double) -> Double {
+        var d = abs(a - b).truncatingRemainder(dividingBy: 2 * .pi)
+        if d > .pi { d = 2 * .pi - d }
+        return d
+    }
 
     func load(_ names: [String]) {
         apps = names
@@ -315,6 +402,39 @@ final class AppWheelController {
     func cancel() -> Bool {
         guard isOpen else { return false }
         close()
+        return true
+    }
+
+    /// Move the current selection by one or more app sectors. Used by the remote ring while the
+    /// wheel is open, so app switching can be done without moving the pointer.
+    func moveSelection(_ delta: Int) {
+        guard isOpen else { return }
+        model.stepHighlight(delta)
+    }
+
+    /// Select and immediately launch the app closest to a remote ring direction.
+    func commitDirection(_ direction: SwipeDirection) {
+        guard isOpen else { return }
+        model.setHighlightForRemoteDirection(direction)
+        commit()
+    }
+
+    /// Highlight by finger position on the Siri Remote touch ring.
+    func selectByRemoteTouch(_ normalized: CGPoint) {
+        guard isOpen else { return }
+        model.setHighlightFromRemoteTouch(normalized)
+    }
+
+    /// Select by the latest finger position on the Siri Remote touch ring, then immediately open it.
+    /// Returns false when there is no usable outer-ring touch, so callers can fall back to a
+    /// four-way direction button.
+    @discardableResult
+    func commitRemoteTouch(_ normalized: CGPoint?) -> Bool {
+        guard isOpen, let normalized = normalized else { return false }
+        let offset = CGPoint(x: normalized.x - 0.5, y: normalized.y - 0.5)
+        guard hypot(offset.x, offset.y) >= 0.24 else { return false }
+        model.setHighlightFromRemoteTouch(normalized)
+        commit()
         return true
     }
 

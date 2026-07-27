@@ -161,6 +161,10 @@ class TouchHandler {
     /// Fired when the cursor is "shaken" (rapid horizontal back-and-forth) — used to trigger the
     /// find-my-cursor highlight. Dispatched on main. Wiring gates it on the enabled setting.
     var onShake: (() -> Void)?
+    /// Fired while the app wheel is open. The wheel consumes the touch surface as a selector, so
+    /// normal cursor/scroll/swipe handling is skipped for those frames.
+    var onAppWheelTouch: ((CGPoint) -> Void)?
+    private var lastAppWheelTouchDispatch: CFTimeInterval = 0
 
     // MARK: - Shake-to-locate detection
     // Feeds the per-frame horizontal movement (post-deadzone, PRE-accel) into a sign-reversal
@@ -478,6 +482,20 @@ class TouchHandler {
         avgY /= Float(activeTouchCount)
         
         let currentPos = CGPoint(x: CGFloat(avgX), y: CGFloat(avgY))
+
+        // While the app wheel is open, the Siri Remote touch ring selects apps directly. Do this
+        // before normal cursor/circular-scroll handling so choosing an app never moves the pointer
+        // underneath the overlay.
+        if RemoteInputHandler.isAppWheelOpen {
+            let now = CACurrentMediaTime()
+            if now - lastAppWheelTouchDispatch >= 1.0 / 30.0 {
+                lastAppWheelTouchDispatch = now
+                DispatchQueue.main.async { [weak self] in self?.onAppWheelTouch?(currentPos) }
+            }
+            lastTouchPosition = currentPos
+            lastTouchCount = activeTouchCount
+            return
+        }
         
         // Handle touch start
         if lastTouchPosition == nil {

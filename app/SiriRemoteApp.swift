@@ -357,10 +357,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             wheel.open()
             RemoteInputHandler.isAppWheelOpen = wheel.isOpen
         }
+        var latestAppWheelTouch: CGPoint?
         remoteInputHandler?.onAppWheelButton = { [weak wheel] button in
             guard let wheel = wheel else { return }
-            if button == "select" { wheel.commit() } else { wheel.cancel() }
+            switch button {
+            case "ring.up", "ringUp":
+                if !wheel.commitRemoteTouch(latestAppWheelTouch) { wheel.commitDirection(.up) }
+            case "ring.right", "ringRight":
+                if !wheel.commitRemoteTouch(latestAppWheelTouch) { wheel.commitDirection(.right) }
+            case "ring.down", "ringDown":
+                if !wheel.commitRemoteTouch(latestAppWheelTouch) { wheel.commitDirection(.down) }
+            case "ring.left", "ringLeft":
+                if !wheel.commitRemoteTouch(latestAppWheelTouch) { wheel.commitDirection(.left) }
+            case "select", "playPause", "tv":
+                if !wheel.commitRemoteTouch(latestAppWheelTouch) { wheel.commit() }
+            case "menu", "siri":
+                wheel.cancel()
+            default:
+                wheel.cancel()
+            }
             RemoteInputHandler.isAppWheelOpen = wheel.isOpen
+            if !wheel.isOpen { latestAppWheelTouch = nil }
+        }
+        touchHandler?.onAppWheelTouch = { [weak wheel] normalized in
+            latestAppWheelTouch = normalized
+            wheel?.selectByRemoteTouch(normalized)
         }
 
         cursorHighlighter = CursorHighlighter()

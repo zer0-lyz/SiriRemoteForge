@@ -1,0 +1,542 @@
+{
+  "appProfiles" : {
+    "com.apple.Music" : "music",
+    "com.apple.Preview" : "viewer",
+    "com.apple.Safari" : "browser",
+    "com.apple.Terminal" : "terminal",
+    "com.apple.finder" : "finder",
+    "com.apple.iWork.Keynote" : "presentation",
+    "com.google.Chrome" : "browser",
+    "com.kingsoft.wpsoffice.mac" : "wps",
+    "com.microsoft.Powerpoint" : "presentation",
+    "com.microsoft.edgemac" : "browser",
+    "com.openai.codex" : "codex",
+    "default" : "global",
+    "dev.warp.Warp-Stable" : "terminal"
+  },
+  "modes" : {
+    "L1" : {
+      "inherits" : "global"
+    },
+    "browser" : {
+      "L1.ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "左箭头"
+      },
+      "L1.ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "右箭头"
+      },
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "chevron.left",
+        "keys" : "cmd+[",
+        "label" : "网页后退"
+      },
+      "button.menu.double" : {
+        "action" : "keystroke",
+        "icon" : "chevron.right",
+        "keys" : "cmd+]",
+        "label" : "网页前进"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "inherits" : "global",
+      "ring.down.double" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "快速下滚"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "cmd+opt+left",
+        "label" : "上个标签"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "cmd+opt+right",
+        "label" : "下个标签"
+      },
+      "ring.up.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.uturn.backward.square",
+        "keys" : "cmd+shift+t",
+        "label" : "恢复标签"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "快速上滚"
+      }
+    },
+    "codex" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "arrow.uturn.backward",
+        "keys" : "cmd+z",
+        "label" : "撤销"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "paperplane.fill",
+        "keys" : "enter",
+        "label" : "发送"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除一字"
+      },
+      "button.siri" : {
+        "action" : "pushToTalk",
+        "icon" : "mic.fill",
+        "keys" : "opt+/",
+        "label" : "按住听写"
+      },
+      "button.siri.double" : {
+        "action" : "keystroke",
+        "icon" : "mic.fill",
+        "keys" : "opt+/",
+        "label" : "听写快捷键"
+      },
+      "button.siri.triple" : {
+        "action" : "keystroke",
+        "icon" : "escape",
+        "keys" : "escape",
+        "label" : "取消"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "down",
+        "label" : "下一行"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "光标左移"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "光标右移"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "up",
+        "label" : "上一行"
+      }
+    },
+    "finder" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "folder",
+        "keys" : "cmd+up",
+        "label" : "上级文件夹"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "down",
+        "label" : "下移"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "左移"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "右移"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "up",
+        "label" : "上移"
+      }
+    },
+    "global" : {
+      "L1.button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "minus.magnifyingglass",
+        "keys" : "cmd+-",
+        "label" : "缩小"
+      },
+      "L1.button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "plus.magnifyingglass",
+        "keys" : "cmd+=",
+        "label" : "放大"
+      },
+      "L1.ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "cmd+down",
+        "label" : "底部"
+      },
+      "L1.ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "cmd+shift+left",
+        "label" : "上个标签"
+      },
+      "L1.ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "cmd+shift+right",
+        "label" : "下个标签"
+      },
+      "L1.ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "cmd+up",
+        "label" : "顶部"
+      },
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "arrow.uturn.left",
+        "keys" : "escape",
+        "label" : "返回"
+      },
+      "button.menu.hold" : {
+        "action" : "closeWindow",
+        "after" : 0.6,
+        "icon" : "xmark.circle",
+        "label" : "关闭窗口"
+      },
+      "button.mute" : {
+        "action" : "media",
+        "icon" : "speaker.slash.fill",
+        "key" : "mute",
+        "label" : "静音"
+      },
+      "button.playPause" : {
+        "action" : "media",
+        "icon" : "playpause.fill",
+        "key" : "playpause",
+        "label" : "播放/暂停"
+      },
+      "button.playPause.hold" : {
+        "action" : "launch",
+        "after" : 0.6,
+        "app" : "Music",
+        "icon" : "music.note",
+        "label" : "打开音乐"
+      },
+      "button.power" : {
+        "action" : "closeWindow",
+        "icon" : "xmark.circle",
+        "label" : "关闭当前窗口"
+      },
+      "button.siri" : {
+        "action" : "pushToTalk",
+        "icon" : "mic.fill",
+        "keys" : "opt+/",
+        "label" : "按住听写"
+      },
+      "button.siri.double" : {
+        "action" : "keystroke",
+        "icon" : "return",
+        "keys" : "enter",
+        "label" : "确认"
+      },
+      "button.siri.triple" : {
+        "action" : "keystroke",
+        "icon" : "escape",
+        "keys" : "escape",
+        "label" : "取消"
+      },
+      "button.tv" : {
+        "action" : "appWheel",
+        "icon" : "circle.grid.3x3.fill",
+        "label" : "应用切换"
+      },
+      "button.tv.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.2.squarepath",
+        "keys" : "cmd+tab",
+        "label" : "上个应用"
+      },
+      "button.tv.hold" : {
+        "action" : "appWheel",
+        "after" : 0.6,
+        "icon" : "circle.grid.3x3.fill",
+        "label" : "应用圆盘"
+      },
+      "button.volumeDown" : {
+        "action" : "media",
+        "icon" : "speaker.wave.1.fill",
+        "key" : "voldown",
+        "label" : "音量-"
+      },
+      "button.volumeUp" : {
+        "action" : "media",
+        "icon" : "speaker.wave.2.fill",
+        "key" : "volup",
+        "label" : "音量+"
+      },
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "down",
+        "label" : "下"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "左"
+      },
+      "ring.left.double" : {
+        "action" : "space",
+        "icon" : "rectangle.split.3x1",
+        "label" : "左桌面",
+        "to" : "left"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "右"
+      },
+      "ring.right.double" : {
+        "action" : "space",
+        "icon" : "rectangle.split.3x1",
+        "label" : "右桌面",
+        "to" : "right"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "up",
+        "label" : "上"
+      },
+      "ring.up.hold" : {
+        "action" : "shell",
+        "after" : 0.6,
+        "command" : "open -a 'Mission Control'",
+        "icon" : "rectangle.3.group",
+        "label" : "调度中心"
+      },
+      "swipe.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "下一页"
+      },
+      "swipe.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "上一页"
+      },
+      "tap.two" : {
+        "action" : "mouse",
+        "icon" : "contextualmenu.and.cursorarrow",
+        "label" : "右键",
+        "op" : "rightclick"
+      }
+    },
+    "music" : {
+      "button.mute" : {
+        "action" : "applescript",
+        "icon" : "speaker.slash.fill",
+        "label" : "静音",
+        "script" : "tell application \"Music\" to set mute to not mute"
+      },
+      "button.playPause" : {
+        "action" : "applescript",
+        "icon" : "playpause.fill",
+        "label" : "播放/暂停",
+        "script" : "tell application \"Music\" to playpause"
+      },
+      "inherits" : "global",
+      "ring.left" : {
+        "action" : "applescript",
+        "icon" : "backward.end.fill",
+        "label" : "上一首",
+        "script" : "tell application \"Music\" to previous track"
+      },
+      "ring.right" : {
+        "action" : "applescript",
+        "icon" : "forward.end.fill",
+        "label" : "下一首",
+        "script" : "tell application \"Music\" to next track"
+      }
+    },
+    "presentation" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "escape",
+        "keys" : "escape",
+        "label" : "退出放映"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "playpause.fill",
+        "keys" : "space",
+        "label" : "播放/暂停"
+      },
+      "button.tv" : {
+        "action" : "fullscreen",
+        "icon" : "arrow.up.left.and.arrow.down.right",
+        "label" : "全屏"
+      },
+      "inherits" : "global",
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "上一页"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "下一页"
+      }
+    },
+    "terminal" : {
+      "button.menu" : {
+        "action" : "repeatKey",
+        "delay" : 0.3,
+        "icon" : "delete.left",
+        "interval" : 0.045,
+        "keys" : "delete",
+        "label" : "连续删除"
+      },
+      "inherits" : "global",
+      "ring.down.double" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "ring.up.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.uturn.backward.square",
+        "keys" : "cmd+shift+t",
+        "label" : "恢复标签"
+      }
+    },
+    "viewer" : {
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "下一页"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "chevron.left",
+        "keys" : "left",
+        "label" : "上一张"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "chevron.right",
+        "keys" : "right",
+        "label" : "下一张"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "上一页"
+      }
+    },
+    "wps" : {
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "inherits" : "global",
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "ctrl+shift+tab",
+        "label" : "上个标签"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "ctrl+tab",
+        "label" : "下个标签"
+      }
+    }
+  },
+  "settings" : {
+    "accelHighSpeed" : 0.06,
+    "accelLowSpeed" : 0.008,
+    "accelMax" : 2.6,
+    "accelMin" : 0.4,
+    "appWheel" : [
+      "ChatGPT",
+      "Finder",
+      "WPS Office",
+      "Google Chrome",
+      "WeChat",
+      "企业微信",
+      "东方财富经典版",
+      "Calendar"
+    ],
+    "circularScroll" : {
+      "accelCurve" : 1,
+      "accelHighSpeed" : 0.07,
+      "accelLowSpeed" : 0.01,
+      "accelMax" : 2.5,
+      "accelMin" : 1,
+      "enabled" : true,
+      "invert" : false,
+      "minRadius" : 0.35,
+      "pixelsPerRadian" : 75,
+      "scrollEase" : 0.3,
+      "startThreshold" : 0.35
+    },
+    "clickRiseThreshold" : 0.1,
+    "cursorDeadzone" : 0.006,
+    "cursorSpeed" : 0.6,
+    "defaultMode" : "global",
+    "doubleTapWindow" : 0.3,
+    "findCursorEnabled" : true,
+    "focusFollowsCursor" : false,
+    "holdCancelGrace" : 1,
+    "holdThreshold" : 0.5,
+    "holdThreshold2" : 1,
+    "holdThreshold3" : 1.6,
+    "pressMoveMax" : 0.025,
+    "spacesModeWindow" : 5,
+    "swipeVelocity" : 0.5
+  }
+}
