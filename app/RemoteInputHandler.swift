@@ -169,11 +169,13 @@ class RemoteInputHandler {
     /// `.taphold*` key's DEFERRED tap when the press turned out to be a hold that already deleted.
     private var heldKeyEngaged: Set<String> = []
 
-    /// Push-to-talk pairs currently OPEN: buttonName → the combo fired on the press edge, replayed
-    /// verbatim on the release edge. Capturing at press time keeps the two edges firing the SAME
-    /// combo even if the binding resolves differently mid-hold (a layer engaged by another button,
-    /// an app switch, a config hot-reload) — the target hotkey is a toggle, and an unpaired edge
-    /// would leave it latched on. Closed by the release edge or by `endPressScopedWork`.
+    /// Push-to-talk pairs currently OPEN: buttonName → the combo currently held down. Capturing at
+    /// press time keeps the release paired with the SAME combo even if the binding resolves
+    /// differently mid-hold (a layer engaged by another button, an app switch, a config hot-reload).
+    /// This is a true physical hold (`Keys.holdBegin` / `holdEnd`), so apps whose dictation shortcut
+    /// means "hold this shortcut while talking" behave like they do with a real keyboard.
+    private var pushToTalkHeld: [String: KeyMap.Combo] = [:]
+    /// The original key string for logging / compatibility around an open push-to-talk pair.
     private var pushToTalkOpen: [String: String] = [:]
     /// Push-to-talk presses whose ACTIVATION delay has not yet elapsed: buttonName → the scheduled
     /// opener. A too-quick tap (released before `pushToTalkActivationDelay`) cancels this and fires
@@ -785,14 +787,19 @@ class RemoteInputHandler {
             }
             return
         }
-        // Release AFTER the opener fired → fire the closing hotkey (dictation off).
+        // Release AFTER the opener fired → release the held hotkey (dictation off).
         if !pressed, let keys = pushToTalkOpen.removeValue(forKey: buttonName) {
-            Keys.synthesize(keys)
-            print("🔘 \(tapKey) → pushToTalk '\(keys)' (release edge)")
+            if let held = pushToTalkHeld.removeValue(forKey: buttonName) {
+                Keys.holdEnd(held)
+                print("🔘 \(tapKey) → pushToTalk '\(keys)' (release held keys)")
+            } else {
+                Keys.synthesize(keys)
+                print("🔘 \(tapKey) → pushToTalk '\(keys)' (release fallback)")
+            }
             return
         }
         // Press → SCHEDULE the opener for `pushToTalkActivationDelay` later. Only if the button is
-        // still held then does it fire and "open" the pair (so the release fires the matching close).
+        // still held then does it press and HOLD the combo (so release can lift it).
         // `keys` is captured at press time so both edges use the SAME combo even if the binding
         // resolves differently mid-hold (a layer/mode change, a config hot-reload).
         if pressed, case let .pushToTalk(keys)? = controller.resolvedAction(for: tapKey) {
@@ -800,9 +807,11 @@ class RemoteInputHandler {
             let work = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
                 self.pushToTalkPending.removeValue(forKey: buttonName)
-                self.pushToTalkOpen[buttonName] = keys
-                Keys.synthesize(keys)
-                print("🔘 \(tapKey) → pushToTalk '\(keys)' (press edge, +\(self.pushToTalkActivationDelay)s)")
+                if let held = Keys.holdBegin(keys) {
+                    self.pushToTalkHeld[buttonName] = held
+                    self.pushToTalkOpen[buttonName] = keys
+                    print("🔘 \(tapKey) → pushToTalk '\(keys)' (press and hold, +\(self.pushToTalkActivationDelay)s)")
+                }
             }
             pushToTalkPending[buttonName] = work
             DispatchQueue.main.asyncAfter(deadline: .now() + pushToTalkActivationDelay, execute: work)
@@ -1625,7 +1634,11 @@ class RemoteInputHandler {
         // was sent, so there is nothing to close.
         pushToTalkPending.removeValue(forKey: buttonName)?.cancel()
         if let keys = pushToTalkOpen.removeValue(forKey: buttonName) {
-            Keys.synthesize(keys)
+            if let held = pushToTalkHeld.removeValue(forKey: buttonName) {
+                Keys.holdEnd(held)
+            } else {
+                Keys.synthesize(keys)
+            }
         }
 
         // Select's drag timer. Left running, it posts mouseDown at +0.5s with nothing physically

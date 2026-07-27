@@ -39,7 +39,7 @@ final class MenuBarManager {
     init(statusItem: NSStatusItem) {
         self.statusItem = statusItem
         self.menu = NSMenu()
-        self.statusMenuItem = NSMenuItem(title: "Status: Disconnected", action: nil, keyEquivalent: "")
+        self.statusMenuItem = NSMenuItem(title: "状态：未连接", action: nil, keyEquivalent: "")
         setupMenuBar()
     }
 
@@ -102,12 +102,12 @@ final class MenuBarManager {
         menu.addItem(statusMenuItem)
 
         menu.addItem(.separator())
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "设置…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }
@@ -117,7 +117,7 @@ final class MenuBarManager {
     func updateConnectionStatus(connected: Bool) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.statusMenuItem.title = connected ? "Status: Connected ✓" : "Status: Disconnected"
+            self.statusMenuItem.title = connected ? "状态：已连接 ✓" : "状态：未连接"
             self.statusItem.button?.appearsDisabled = !connected
         }
     }

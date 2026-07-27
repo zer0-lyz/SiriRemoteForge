@@ -21,7 +21,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LaunchAtLogin.state.isOn
     @State private var launchAtLoginError: String?
 
-    private enum Tab: String, CaseIterable { case tuning = "Tuning", layout = "Layout" }
+    private enum Tab: String, CaseIterable { case tuning = "调校", layout = "布局" }
     @State private var tab: Tab = .tuning
 
     var body: some View {
@@ -52,7 +52,7 @@ struct SettingsView: View {
                     })
                 } else {
                     Spacer()
-                    Text("Loading config…").foregroundStyle(.secondary)
+                    Text("正在加载配置…").foregroundStyle(.secondary)
                     Spacer()
                 }
             }
@@ -103,8 +103,8 @@ struct SettingsView: View {
                 .shadow(color: Color.accentColor.opacity(0.35), radius: 7, y: 3)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("siriRemote").font(.system(size: 19, weight: .semibold))
-                Text("Touch & gesture tuning")
+                Text("Siri 遥控器").font(.system(size: 19, weight: .semibold))
+                Text("触控与手势调校")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Spacer()
@@ -120,7 +120,7 @@ struct SettingsView: View {
             Circle()
                 .fill(model.connected ? Color.green : Color.secondary.opacity(0.45))
                 .frame(width: 7, height: 7)
-            Text(model.connected ? "Connected" : "Waiting")
+            Text(model.connected ? "已连接" : "等待连接")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -169,12 +169,12 @@ struct SettingsView: View {
                             Image(systemName: batterySymbol(pct)).foregroundStyle(batteryTint(pct))
                             Text("\(pct)%").monospacedDigit()
                         }
-                    } label: { rowLabel("Battery", "bolt.fill") }
+                    } label: { rowLabel("电量", "bolt.fill") }
                 }
                 if let fw = device.firmware {
                     LabeledContent {
                         Text(fw).monospacedDigit().foregroundStyle(.secondary)
-                    } label: { rowLabel("Firmware", "cpu") }
+                    } label: { rowLabel("固件", "cpu") }
                 }
                 if let addr = device.address {
                     LabeledContent {
@@ -182,7 +182,7 @@ struct SettingsView: View {
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
-                    } label: { rowLabel("Bluetooth address", "dot.radiowaves.left.and.right") }
+                    } label: { rowLabel("蓝牙地址", "dot.radiowaves.left.and.right") }
                 }
                 if let name = device.name {
                     LabeledContent {
@@ -190,14 +190,14 @@ struct SettingsView: View {
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
-                    } label: { rowLabel("Serial", "number") }
+                    } label: { rowLabel("序列号", "number") }
                 }
                 if let vid = device.vendorID, let pid = device.productID {
                     LabeledContent {
                         Text("\(vid) / \(pid)")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
-                    } label: { rowLabel("Vendor / Product", "tag") }
+                    } label: { rowLabel("厂商 / 产品", "tag") }
                 }
                 if !device.interfaces.isEmpty {
                     DisclosureGroup {
@@ -210,7 +210,7 @@ struct SettingsView: View {
                                         .frame(width: 92, alignment: .leading)
                                     Text(i.label).font(.system(size: 11))
                                     Spacer()
-                                    Text("in \(i.maxInput) · feat \(i.maxFeature)")
+                                    Text("输入 \(i.maxInput) · 功能 \(i.maxFeature)")
                                         .font(.system(size: 10, design: .monospaced))
                                         .foregroundStyle(.tertiary)
                                 }
@@ -218,17 +218,17 @@ struct SettingsView: View {
                         }
                         .padding(.top, 4)
                     } label: {
-                        rowLabel("HID interfaces (\(device.interfaces.count))", "list.bullet.indent")
+                        rowLabel("HID 接口（\(device.interfaces.count)）", "list.bullet.indent")
                     }
                 }
             } else {
-                Text("Remote not connected")
+                Text("遥控器未连接")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
         } header: {
             HStack {
-                Text("Device")
+                Text("设备")
                 Spacer()
                 Button {
                     device.refresh()
@@ -237,12 +237,12 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.borderless)
                 .disabled(device.refreshing)
-                .help("Refresh device information")
+                .help("刷新设备信息")
             }
         } footer: {
             Text(device.updatedAt == nil
-                 ? "The remote's microphone is not readable on macOS — see docs/mic-reverse-engineering.md"
-                 : "Battery and firmware come from the system Bluetooth stack. The microphone is not readable on macOS.")
+                 ? "macOS 不会直接暴露遥控器麦克风。"
+                 : "电量和固件来自系统蓝牙信息。macOS 不会直接暴露遥控器麦克风。")
                 .font(.system(size: 11))
         }
     }
@@ -251,109 +251,109 @@ struct SettingsView: View {
 
     private var cursorSection: some View {
         Section {
-            slider(icon: "cursorarrow.motionlines", title: "Speed",
+            slider(icon: "cursorarrow.motionlines", title: "速度",
                    value: $model.tune.cursorSpeed, range: 0.1...3.0,
                    minIcon: "tortoise.fill", maxIcon: "hare.fill",
                    display: { String(format: "%.2f×", $0) })
-            slider(icon: "hand.raised.fill", title: "Steadiness",
+            slider(icon: "hand.raised.fill", title: "稳定度",
                    value: $model.tune.cursorDeadzone, range: 0.0...0.02,
                    minIcon: "scribble.variable", maxIcon: "hand.raised.fill",
                    display: { String(format: "%.0f", $0 * 1000) })
             Toggle(isOn: $model.tune.findCursorEnabled) {
-                rowLabel("Find cursor on shake", "cursorarrow.rays")
+                rowLabel("摇动时高亮指针", "cursorarrow.rays")
             }
             Toggle(isOn: $model.tune.focusFollowsCursor) {
-                rowLabel("Focus app under cursor", "macwindow.on.rectangle")
+                rowLabel("焦点跟随指针", "macwindow.on.rectangle")
             }
         } header: {
-            Text("Cursor")
+            Text("指针")
         } footer: {
-            Text("Higher steadiness ignores finger jitter, so it's easier to hold still and click. Find cursor on shake flashes a ring around the pointer when you rapidly shake it back and forth.\n\nFocus app under cursor makes shortcuts land where you're pointing: rest the cursor on another display and the app there becomes frontmost. Only apps already covering that whole display, fullscreen or maximised — raising one of those changes nothing you can see, while doing this to overlapping windows would reshuffle them as the pointer crossed.")
+            Text("稳定度越高，越会忽略手指抖动，按下点击时更不容易漂移。快速来回移动指针时，可以用高亮圈帮你找到鼠标位置。\n\n焦点跟随指针会让快捷键发送到指针所在的应用。它只会作用于已经占满当前显示器的窗口，避免打乱重叠窗口的层级。")
         }
     }
 
     private var accelerationSection: some View {
         Section {
-            slider(icon: "tortoise.fill", title: "Slow-move factor",
+            slider(icon: "tortoise.fill", title: "慢速倍率",
                    value: $model.tune.accelMin, range: 0.2...1.0,
                    minIcon: "tortoise.fill", maxIcon: "cursorarrow.motionlines",
                    display: { String(format: "%.2f×", $0) })
-            slider(icon: "hare.fill", title: "Fast-move factor",
+            slider(icon: "hare.fill", title: "快速倍率",
                    value: $model.tune.accelMax, range: 1.0...4.0,
                    minIcon: "cursorarrow.motionlines", maxIcon: "hare.fill",
                    display: { String(format: "%.2f×", $0) })
-            slider(icon: "arrow.down.forward", title: "Slow threshold",
+            slider(icon: "arrow.down.forward", title: "慢速阈值",
                    value: $model.tune.accelLowSpeed, range: 0.002...0.03,
                    minIcon: "tortoise.fill", maxIcon: "hare.fill",
                    display: { String(format: "%.0f", $0 * 1000) })
-            slider(icon: "arrow.up.forward", title: "Fast threshold",
+            slider(icon: "arrow.up.forward", title: "快速阈值",
                    value: $model.tune.accelHighSpeed, range: 0.02...0.12,
                    minIcon: "tortoise.fill", maxIcon: "hare.fill",
                    display: { String(format: "%.0f", $0 * 1000) })
         } header: {
-            Text("Pointer Acceleration")
+            Text("指针加速度")
         } footer: {
-            Text("Slow finger motion moves the cursor less (precision); fast motion moves it more (reach), scaling on top of Speed. The two thresholds mark where the slow and fast ends kick in — below the slow threshold the factor is the slow-move factor, above the fast threshold it's the fast-move factor, smooth between.")
+            Text("手指慢速移动时指针更精细，快速滑动时指针移动更远。两个阈值决定慢速和快速倍率从哪里开始生效，中间会平滑过渡。")
         }
     }
 
     private var clickSection: some View {
         Section {
-            slider(icon: "hand.tap.fill", title: "Press sensitivity",
+            slider(icon: "hand.tap.fill", title: "按压灵敏度",
                    value: $model.tune.clickRiseThreshold, range: 0.04...0.25,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
                    display: { String(format: "%.2f", $0) })
-            slider(icon: "arrow.up.and.down.and.arrow.left.and.right", title: "Move tolerance",
+            slider(icon: "arrow.up.and.down.and.arrow.left.and.right", title: "移动容忍度",
                    value: $model.tune.pressMoveMax, range: 0.01...0.06,
                    minIcon: "smallcircle.filled.circle.fill", maxIcon: "circle",
                    display: { String(format: "%.3f", $0) })
         } header: {
-            Text("Click")
+            Text("点击")
         } footer: {
-            Text("Pressing to click freezes the cursor so it doesn't drift. Lower sensitivity freezes more readily; higher move tolerance keeps it from feeling stuck.")
+            Text("按下点击时会短暂冻结指针，避免点击瞬间漂移。灵敏度越低越容易冻结；移动容忍度越高，手感越不容易发粘。")
         }
     }
 
     private var buttonsSection: some View {
         Section {
-            slider(icon: "clock", title: "Long-press time",
+            slider(icon: "clock", title: "长按时间",
                    value: $model.tune.holdThreshold, range: 0.2...1.2,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
                    display: { String(format: "%.1fs", $0) })
-            slider(icon: "hand.tap.fill", title: "Double-tap speed",
+            slider(icon: "hand.tap.fill", title: "双击速度",
                    value: $model.tune.doubleTapWindow, range: 0.15...0.6,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
                    display: { String(format: "%.2fs", $0) })
-            slider(icon: "rectangle.on.rectangle", title: "Spaces Mode timeout",
+            slider(icon: "rectangle.on.rectangle", title: "桌面切换超时",
                    value: $model.tune.spacesModeWindow, range: 2.0...15.0,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
                    display: { String(format: "%.0fs", $0) })
         } header: {
-            Text("Buttons")
+            Text("按键")
         } footer: {
-            Text("Long-press time: how long to hold a button before its \u{201C}.hold\u{201D} fires. Double-tap speed: the window for a second tap to trigger a \u{201C}.double\u{201D} binding instead of a second single press. Spaces Mode timeout: after long-pressing ring-up to arm desktop switching, how long without a left/right switch before it disarms.")
+            Text("长按时间决定按住多久触发 .hold 动作。双击速度决定第二次点击需要多快才算 .double。桌面切换超时用于控制进入桌面切换状态后多久自动退出。")
         }
     }
 
     private var circularSection: some View {
         Section {
             Toggle(isOn: $model.tune.circularEnabled) {
-                rowLabel("Circular scroll", "arrow.clockwise")
+                rowLabel("圆环滚动", "arrow.clockwise")
             }
             if model.tune.circularEnabled {
-                slider(icon: "circle.dashed", title: "Outer ring only",
+                slider(icon: "circle.dashed", title: "仅外圈",
                        value: $model.tune.circularMinRadius, range: 0.15...0.45,
                        minIcon: "smallcircle.filled.circle.fill", maxIcon: "circle",
                        display: { String(format: "%.0f%%", $0 * 100) })
-                slider(icon: "timer", title: "Start resistance",
+                slider(icon: "timer", title: "启动阻力",
                        value: $model.tune.circularStartThreshold, range: 0.1...1.5,
                        minIcon: "hare.fill", maxIcon: "tortoise.fill",
                        display: { String(format: "%.0f°", $0 * 180 / .pi) })
-                slider(icon: "speedometer", title: "Scroll speed",
+                slider(icon: "speedometer", title: "滚动速度",
                        value: $model.tune.circularPixelsPerRadian, range: 40...400,
                        minIcon: "tortoise.fill", maxIcon: "hare.fill",
                        display: { String(format: "%.0f", $0) })
-                slider(icon: "wind", title: "Smoothness",
+                slider(icon: "wind", title: "平滑度",
                        value: $model.tune.circularScrollEase, range: 0.1...0.6,
                        minIcon: "tortoise.fill", maxIcon: "hare.fill",
                        display: { String(format: "%.2f", $0) })
@@ -361,7 +361,7 @@ struct SettingsView: View {
                 // Velocity gain — shown as a curve, because four numbers do not tell you what the
                 // wheel will feel like, and the shape does.
                 VStack(alignment: .leading, spacing: 10) {
-                    rowLabel("Speed response", "chart.xyaxis.line")
+                    rowLabel("速度响应", "chart.xyaxis.line")
                     AccelCurveView(accelMin: model.tune.circularAccelMin,
                                    accelMax: model.tune.circularAccelMax,
                                    lowSpeed: model.tune.circularAccelLowSpeed,
@@ -370,27 +370,27 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 2)
 
-                slider(icon: "tortoise.fill", title: "Slow gain",
+                slider(icon: "tortoise.fill", title: "慢速增益",
                        value: $model.tune.circularAccelMin, range: 0.1...1.5,
                        minIcon: "minus", maxIcon: "plus",
                        display: { String(format: "%.2f×", $0) })
-                slider(icon: "hare.fill", title: "Fast gain",
+                slider(icon: "hare.fill", title: "快速增益",
                        value: $model.tune.circularAccelMax, range: 1.0...5.0,
                        minIcon: "minus", maxIcon: "plus",
                        display: { String(format: "%.2f×", $0) })
-                slider(icon: "point.topleft.down.curvedto.point.bottomright.up", title: "Curve shape",
+                slider(icon: "point.topleft.down.curvedto.point.bottomright.up", title: "曲线形状",
                        value: $model.tune.circularAccelCurve, range: 0.4...4.0,
                        minIcon: "arrow.up.right", maxIcon: "arrow.turn.up.right",
                        display: { String(format: "%.1f", $0) })
 
                 Toggle(isOn: $model.tune.circularInvert) {
-                    rowLabel("Reverse direction", "arrow.left.arrow.right")
+                    rowLabel("反转方向", "arrow.left.arrow.right")
                 }
             }
         } header: {
-            Text("Circular Scroll")
+            Text("圆环滚动")
         } footer: {
-            Text("Circle a finger on the pad's outer ring to scroll — like a click wheel.")
+            Text("手指沿触控板外圈画圆即可滚动，类似经典转盘。")
         }
         .animation(.easeInOut(duration: 0.22), value: model.tune.circularEnabled)
     }
@@ -411,15 +411,15 @@ struct SettingsView: View {
                     launchAtLogin = LaunchAtLogin.state.isOn
                 }
             )) {
-                rowLabel("Start at login", "arrow.up.forward.app")
+                rowLabel("登录时启动", "arrow.up.forward.app")
             }
             .disabled(LaunchAtLogin.state == .unavailable)
         } header: {
-            Text("Startup")
+            Text("启动")
         } footer: {
-            Text(launchAtLoginError.map { "Couldn't change it: \($0)" }
+            Text(launchAtLoginError.map { "无法更改：\($0)" }
                  ?? LaunchAtLogin.note
-                 ?? "Runs HyperVibe automatically after you log in. Also listed under System Settings → General → Login Items.")
+                 ?? "登录后自动运行 HyperVibe。也可以在系统设置 → 通用 → 登录项中管理。")
                 .font(.system(size: 11))
                 .foregroundStyle(launchAtLoginError == nil ? Color.secondary : Color.red)
         }
@@ -430,10 +430,10 @@ struct SettingsView: View {
             Button(role: .destructive) {
                 withAnimation { model.resetToDefaults() }
             } label: {
-                rowLabel("Reset to defaults", "arrow.counterclockwise")
+                rowLabel("恢复默认设置", "arrow.counterclockwise")
             }
         } footer: {
-            Text("Button, ring, and swipe mappings live in ~/.config/siriremote/config.jsonc")
+            Text("按键、圆环和滑动映射保存在 ~/.config/siriremote/config.jsonc")
                 .font(.system(size: 11))
         }
     }

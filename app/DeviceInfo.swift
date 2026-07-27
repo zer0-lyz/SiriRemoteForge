@@ -28,13 +28,13 @@ final class DeviceInfo: ObservableObject {
         /// Human label for the usage pairs this remote actually exposes.
         var label: String {
             switch (usagePage, usage) {
-            case (0x0C, 0x01):  return "Consumer control"
-            case (0x0C, 0x04):  return "Audio (mic channel)"
+            case (0x0C, 0x01):  return "消费控制"
+            case (0x0C, 0x04):  return "音频（麦克风通道）"
             case (0x0C, 0x109): return "Consumer 0x109"
-            case (0x0D, 0x01):  return "Digitizer / trackpad"
+            case (0x0D, 0x01):  return "数字化板 / 触控板"
             case (0x20, 0x42):  return "Sensor 0x42"
             case (0x20, 0xE0):  return "Sensor 0xE0"
-            case (0xFF00, 0x0B): return "Apple device management"
+            case (0xFF00, 0x0B): return "Apple 设备管理"
             default:            return "—"
             }
         }
