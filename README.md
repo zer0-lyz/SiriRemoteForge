@@ -267,9 +267,23 @@ dedicated uninstaller. Development setup and component-level details live in
 
 JSONC (JSON + `//` comments). A default is written on first run. **Saving hot-reloads it live.**
 Three top-level keys: `settings`, `appProfiles`, `modes`. A complete, working example to crib from
-lives in [`examples/config.jsonc`](examples/config.jsonc), and the maintainer's actual daily-driver
+lives in [`examples/config.jsonc`](examples/config.jsonc), the maintainer's actual daily-driver
 setup — push-to-talk, per-app Music/browser/terminal modes, layers — is in
-[`examples/config.author.jsonc`](examples/config.author.jsonc).
+[`examples/config.author.jsonc`](examples/config.author.jsonc), and a Codex/TV-style remote preset
+for syncing across the user's Macs is in
+[`examples/config.codex-tv-remote.jsonc`](examples/config.codex-tv-remote.jsonc).
+
+### Sync the Codex TV remote preset to another Mac
+
+On another Mac, clone this repository and run:
+
+```sh
+scripts/install-codex-tv-config.sh
+```
+
+That copies `examples/config.codex-tv-remote.jsonc` to
+`~/.config/siriremote/config.jsonc` and backs up any existing config first. Then launch or restart
+`HyperVibe.app`, pair the Siri Remote over Bluetooth, and grant Accessibility + Input Monitoring.
 
 ```jsonc
 {
