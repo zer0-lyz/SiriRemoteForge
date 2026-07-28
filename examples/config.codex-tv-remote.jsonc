@@ -109,13 +109,13 @@
       "button.siri" : {
         "action" : "pushToTalk",
         "icon" : "mic.fill",
-        "keys" : "opt+/",
+        "keys" : "ropt+/",
         "label" : "按住听写"
       },
       "button.siri.double" : {
         "action" : "keystroke",
         "icon" : "mic.fill",
-        "keys" : "opt+/",
+        "keys" : "ropt+/",
         "label" : "听写快捷键"
       },
       "button.siri.triple" : {
@@ -259,7 +259,7 @@
       "button.siri" : {
         "action" : "pushToTalk",
         "icon" : "mic.fill",
-        "keys" : "opt+/",
+        "keys" : "ropt+/",
         "label" : "按住听写"
       },
       "button.siri.double" : {
