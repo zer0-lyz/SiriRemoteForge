@@ -440,6 +440,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         remoteInputHandler?.onButtonActivity = { [weak self] in
             self?.touchHandler?.tryReconnectTrackpad()
         }
+        remoteInputHandler?.onSiriButtonState = { pressed in
+            NativePushToTalk.setEnabled(pressed)
+        }
         
         // Start remote detection
         remoteDetector = RemoteDetector { [weak self] device in
@@ -468,14 +471,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         remoteDetector?.startDetection()
-
-        if CommandLine.arguments.contains("--native-ptt") {
-            // Let all seven IOHID raw-report callbacks attach before the Apple driver starts its
-            // native push-to-talk path. The continuously running process then captures any audio.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                NativePushToTalk.setEnabled(true)
-            }
-        }
 
         if CommandLine.arguments.contains("--direct-ptt") {
             // Wait for all seven virtual interfaces to enumerate, then hold the remote's hidden
@@ -619,9 +614,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             persistTuneToConfig()
         }
 
-        if CommandLine.arguments.contains("--native-ptt") {
-            NativePushToTalk.setEnabled(false)
-        }
+        NativePushToTalk.setEnabled(false)
         if CommandLine.arguments.contains("--direct-ptt") {
             remoteInputHandler?.setDirectPushToTalk(false)
         }

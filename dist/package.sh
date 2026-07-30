@@ -1,8 +1,11 @@
 #!/bin/bash
 # Assemble public-safe, versioned Release assets from the current built artifacts.
 #
-# Public mode is the default and cannot include a personal config or PacketLogger:
+# Public mode is the default and cannot include a custom config or PacketLogger:
 #   dist/package.sh --version 0.1.0-beta.1
+#
+# A repository-tracked preset may be packaged publicly without PacketLogger:
+#   dist/package.sh --preset-config examples/config.codex-tv-remote.jsonc --version 1.1.0-macmini
 #
 # Personal transfer mode is explicit and must never be uploaded:
 #   dist/package.sh --personal --with-packetlogger --version local
@@ -20,7 +23,7 @@ WITH_PACKETLOGGER=0
 CONFIG_SOURCE=""
 
 usage() {
-    echo "usage: dist/package.sh [--version VERSION] [--personal [--config PATH] [--with-packetlogger]]"
+    echo "usage: dist/package.sh [--version VERSION] [--preset-config PATH | --personal [--config PATH] [--with-packetlogger]]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -33,6 +36,12 @@ while [ "$#" -gt 0 ]; do
         --personal)
             MODE="personal"
             shift
+            ;;
+        --preset-config)
+            [ "$#" -ge 2 ] || { usage; exit 2; }
+            MODE="preset"
+            CONFIG_SOURCE="$2"
+            shift 2
             ;;
         --config)
             [ "$#" -ge 2 ] || { usage; exit 2; }
@@ -75,6 +84,23 @@ fi
 if [ "$MODE" = "public" ] && { [ -n "$CONFIG_SOURCE" ] || [ "$WITH_PACKETLOGGER" -eq 1 ]; }; then
     echo "REFUSED: public assets cannot include --config or --with-packetlogger" >&2
     exit 2
+fi
+if [ "$MODE" = "preset" ]; then
+    [ "$WITH_PACKETLOGGER" -eq 0 ] || {
+        echo "REFUSED: public preset assets cannot include PacketLogger" >&2
+        exit 2
+    }
+    case "$CONFIG_SOURCE" in
+        "$ROOT/examples/"*.jsonc) ;;
+        *)
+            echo "REFUSED: --preset-config must be a tracked examples/*.jsonc file" >&2
+            exit 2
+            ;;
+    esac
+    git ls-files --error-unmatch "${CONFIG_SOURCE#"$ROOT/"}" >/dev/null 2>&1 || {
+        echo "REFUSED: preset config is not tracked by Git" >&2
+        exit 2
+    }
 fi
 
 need() {
@@ -120,6 +146,8 @@ echo "→ assembling $MODE payload ($VERSION, $ASSET_ARCH)"
 /bin/cp "$ROOT/mic/captured/au.holodata.SiriRemoteMic.captured.plist" "$PAYLOAD/"
 /bin/cp "$DIST/do_install.sh" "$PAYLOAD/"
 /bin/cp "$DIST/do_uninstall.sh" "$PAYLOAD/"
+/bin/cp "$DIST/install_user_config.sh" "$PAYLOAD/"
+/bin/cp "$DIST/post_install_check.sh" "$PAYLOAD/"
 /bin/cp "$ROOT/LICENSE" "$PAYLOAD/Legal/GPL-3.0.txt"
 /bin/cp "$ROOT/NOTICE" "$PAYLOAD/Legal/NOTICE.txt"
 /bin/cp "$ROOT/mic/driver/vendor/BlackHole-LICENSE.txt" "$PAYLOAD/Legal/BlackHole-LICENSE.txt"
@@ -127,6 +155,8 @@ echo "→ assembling $MODE payload ($VERSION, $ASSET_ARCH)"
 
 if [ "$MODE" = "public" ]; then
     CONFIG_SOURCE="$ROOT/examples/config.jsonc"
+elif [ "$MODE" = "preset" ]; then
+    [ -f "$CONFIG_SOURCE" ] || { echo "preset config not found: $CONFIG_SOURCE" >&2; exit 1; }
 else
     if [ -z "$CONFIG_SOURCE" ]; then
         CONFIG_SOURCE="$HOME/.config/siriremote/config.jsonc"
@@ -134,6 +164,11 @@ else
     [ -f "$CONFIG_SOURCE" ] || { echo "personal config not found: $CONFIG_SOURCE" >&2; exit 1; }
 fi
 /bin/cp "$CONFIG_SOURCE" "$PAYLOAD/config.jsonc"
+if [ "$MODE" = "personal" ] && [ -f "$DIST/MACMINI-PRIVATE-README.md" ]; then
+    /bin/cp "$DIST/MACMINI-PRIVATE-README.md" "$PAYLOAD/README-私人迁移包.md"
+elif [ "$MODE" = "preset" ] && [ -f "$DIST/MACMINI-PRESET-README.md" ]; then
+    /bin/cp "$DIST/MACMINI-PRESET-README.md" "$PAYLOAD/README-GitHub安装包.md"
+fi
 
 if [ "$WITH_PACKETLOGGER" -eq 1 ]; then
     [ "$MODE" = "personal" ] || { echo "PacketLogger requires --personal" >&2; exit 2; }
@@ -144,11 +179,13 @@ if [ "$WITH_PACKETLOGGER" -eq 1 ]; then
     /bin/cp -R /Applications/PacketLogger.app "$PAYLOAD/PacketLogger.app"
 fi
 
-if [ "$MODE" = "public" ]; then
+if [ "$MODE" = "public" ] || [ "$MODE" = "preset" ]; then
     [ ! -d "$PAYLOAD/PacketLogger.app" ] || {
         echo "REFUSED: PacketLogger found in public payload" >&2
         exit 2
     }
+fi
+if [ "$MODE" = "public" ]; then
     /usr/bin/cmp -s "$PAYLOAD/config.jsonc" "$ROOT/examples/config.jsonc" || {
         echo "REFUSED: public payload config is not examples/config.jsonc" >&2
         exit 2
@@ -164,6 +201,9 @@ COMMIT="${HYPERVIBE_SOURCE_COMMIT:-$(git rev-parse HEAD)}"
     "Personal config bundled: $([ "$MODE" = "personal" ] && echo yes || echo no)" \
     "PacketLogger bundled: $([ "$WITH_PACKETLOGGER" -eq 1 ] && echo yes || echo no)" \
     > "$PAYLOAD/BUILD-INFO.txt"
+
+/bin/chmod 755 "$PAYLOAD/do_install.sh" "$PAYLOAD/do_uninstall.sh" \
+    "$PAYLOAD/install_user_config.sh" "$PAYLOAD/post_install_check.sh"
 
 echo "→ building uninstaller"
 /usr/bin/osacompile -l AppleScript -o "$UNINSTALL_APP" "$DIST/uninstaller.applescript"
@@ -230,4 +270,6 @@ echo "✓ $FULL_ZIP"
 echo "✓ $OUT/SHA256SUMS.txt"
 if [ "$MODE" = "personal" ]; then
     echo "⚠ personal build: never upload these assets publicly"
+elif [ "$MODE" = "preset" ]; then
+    echo "✓ public preset build: tracked config included; PacketLogger excluded"
 fi

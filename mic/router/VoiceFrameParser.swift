@@ -13,7 +13,8 @@ struct RemoteVoiceFrame {
 }
 
 enum VoiceFrameParser {
-    private static let signature: [UInt8] = [0x04, 0x00, 0x1B, 0x35, 0x00]
+    private static let notificationPrefix: [UInt8] = [0x04, 0x00, 0x1B]
+    private static let supportedAttributeHandles: Set<UInt16> = [0x0035, 0x0036]
 
     static func parse(_ line: String) -> RemoteVoiceFrame? {
         let fields = line.split(whereSeparator: { $0.isWhitespace })
@@ -37,14 +38,13 @@ enum VoiceFrameParser {
     }
 
     /// Core extractor shared by the text path and the binary `.pklg` path. `bytes` must be a
-    /// buffer that contains the ATT signature `04 00 1B 35 00` (L2CAP CID 0x0004, opcode 0x1B,
-    /// handle 0x0035) followed by the notification value. For the text path this is the whole
-    /// raw ACL packet; for the binary path it is the reassembled L2CAP PDU. The logic beyond the
-    /// signature — sequence, Opus length, TOC 0xB8 — is identical, so both paths decode the same
-    /// frames (verified: cap_mic.pklg → 804 frames, byte-for-byte with the text capture).
+    /// buffer that contains an ATT notification (`04 00 1B`) for a supported voice attribute
+    /// handle followed by the notification value. Remotes observed so far use 0x0035 or 0x0036.
+    /// For the text path this is the whole raw ACL packet; for the binary path it is the
+    /// reassembled L2CAP PDU. Sequence, Opus length and TOC validation are shared by both paths.
     static func parse(bytes: [UInt8], handle: String) -> RemoteVoiceFrame? {
-        guard let signatureIndex = firstIndex(of: signature, in: bytes) else { return nil }
-        let valueIndex = signatureIndex + signature.count
+        guard let prefixIndex = firstSupportedNotificationIndex(in: bytes) else { return nil }
+        let valueIndex = prefixIndex + notificationPrefix.count + 2
         guard valueIndex + 5 <= bytes.count else { return nil }
 
         let sequence = UInt16(bytes[valueIndex + 2])
@@ -58,6 +58,25 @@ enum VoiceFrameParser {
         return RemoteVoiceFrame(connectionHandle: handle,
                                 sequence: sequence,
                                 opusPayload: Data(payload))
+    }
+
+    private static func firstSupportedNotificationIndex(in bytes: [UInt8]) -> Int? {
+        var searchStart = 0
+        while searchStart <= bytes.count - notificationPrefix.count - 2 {
+            guard let relativeIndex = firstIndex(
+                of: notificationPrefix,
+                in: Array(bytes[searchStart...])
+            ) else {
+                return nil
+            }
+            let index = searchStart + relativeIndex
+            let attributeHandle = UInt16(bytes[index + 3]) | (UInt16(bytes[index + 4]) << 8)
+            if supportedAttributeHandles.contains(attributeHandle) {
+                return index
+            }
+            searchStart = index + 1
+        }
+        return nil
     }
 
     private static func firstIndex(of needle: [UInt8], in haystack: [UInt8]) -> Int? {

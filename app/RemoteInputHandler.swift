@@ -208,6 +208,9 @@ class RemoteInputHandler {
 
     /// Called on any button activity; use to trigger trackpad re-scan after remote wake.
     var onButtonActivity: (() -> Void)?
+    /// Raw physical Siri-button state. This bypasses tap/hold mapping so native microphone PTT
+    /// begins on key-down and always ends on key-up, even when an app-specific action is bound.
+    var onSiriButtonState: ((_ pressed: Bool) -> Void)?
     
     // First press after connection: do not perform action (sound already played at connect).
     private var isFirstPressAfterConnection = false
@@ -594,6 +597,10 @@ class RemoteInputHandler {
             return
         }
         buttonState[buttonName] = isPressed
+
+        if buttonName == "siri" {
+            onSiriButtonState?(isPressed)
+        }
 
         // The remote can sleep between initial enumeration and a later Siri press. Re-send the
         // gen-3 enable byte at the physical start of every diagnostic trial so a stale activation
@@ -1553,6 +1560,9 @@ class RemoteInputHandler {
     /// `Keys.synthesize` posts down and up in one synchronous call, so a disconnect cannot land
     /// between them.)
     private func releaseAllHeldKeys() {
+        if buttonState["siri"] == true {
+            onSiriButtonState?(false)
+        }
         // Before clearing the state, end every press that is still open. Losing the device ends a
         // press with no release at all, so nothing it armed would otherwise be cancelled — a Select
         // press interrupted inside its 0.5s drag window posted mouseDown AFTER this cleanup ran,
