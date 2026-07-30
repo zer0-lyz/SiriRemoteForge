@@ -167,6 +167,7 @@ enum ActionVisual {
         case .minimize:    return "arrow.down.right.and.arrow.up.left"
         case .closeWindow: return "xmark.circle.fill"
         case .appWheel:    return "circle.grid.3x3.fill"
+        case .appSwitcher: return "arrow.2.squarepath"
         case .repeatKey:   return "repeat"
         case .brightness:  return "sun.max.fill"
         }

@@ -37,6 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Config engine (SiriRemoteCore)
     private var controller: Controller?
+    private var actionExecutor: MacActionExecutor?
     private var appWatcher: AppWatcher?
     private var configWatcher: ConfigFileWatcher?
 
@@ -244,15 +245,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // The launcher is summoned by an ordinary `.appWheel` hold binding, so it arrives here as an
         // action like any other — and inherits the progress card that every hold gets.
         let actionExecutor = MacActionExecutor()
+        actionExecutor.appSwitcherStepInterval = config.settings.appSwitcherStepInterval
+        self.actionExecutor = actionExecutor
         let engineController = Controller(
             engine: MappingEngine(config: config),
             executor: actionExecutor
         )
         controller = engineController
         remoteInputHandler?.controller = engineController
+        var baseCircularScrollAxis: CircularScrollAxis = .vertical
+        var activeCircularLayer: String?
+        var activeProfileKey: String?
+        let applyCircularScrollAxis: () -> Void = { [weak self] in
+            switch activeCircularLayer {
+            case "L1":
+                self?.touchHandler?.circularScrollAxis = .horizontal
+            case "selectText":
+                self?.touchHandler?.circularScrollAxis = .textSelection
+            case "sheetHorizontal" where activeProfileKey == "com.kingsoft.wpsoffice.mac:sheet":
+                self?.touchHandler?.circularScrollAxis = .horizontal
+            default:
+                self?.touchHandler?.circularScrollAxis = baseCircularScrollAxis
+            }
+        }
         appWatcher = AppWatcher { [weak engineController] bundleID in
             rmDebug("🎯 frontmost app → \(bundleID)")
             engineController?.frontmostAppChanged(bundleID: bundleID)
+            activeProfileKey = bundleID
+            baseCircularScrollAxis = .vertical
+            applyCircularScrollAxis()
         }
         configWatcher = ConfigFileWatcher(url: ConfigStore.path) { [weak self] in
             let reloaded = ConfigStore.loadConfig()
@@ -266,10 +287,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // reload() resets the engine to the default mode; re-apply the current frontmost app so
             // per-app bindings (e.g. terminal repeat-Delete) don't silently drop to global until the
             // next app switch. (AppWatcher only fires on activation *changes*.)
-            if let bid = NSWorkspace.shared.frontmostApplication?.bundleIdentifier {
-                self?.controller?.frontmostAppChanged(bundleID: bid)
+            if let key = AppWatcher.profileKey(for: NSWorkspace.shared.frontmostApplication) {
+                self?.controller?.frontmostAppChanged(bundleID: key)
+                activeProfileKey = key
+                baseCircularScrollAxis = .vertical
+                applyCircularScrollAxis()
             }
             self?.settingsModel?.config = reloaded   // keep the Layout tab in sync on hot-reload
+            actionExecutor.appSwitcherStepInterval = reloaded.settings.appSwitcherStepInterval
             self?.appWheel?.configure(apps: reloaded.settings.appWheel)   // and the launcher's app list
             // Live-tune: re-seed tuning from the config's `settings` so editing config.jsonc updates
             // cursor feel / thresholds immediately. The @Published didSet applies it (→ applyTune)
@@ -283,10 +308,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let touch = TouchHandler(cursorController: cursorController)
         touchHandler = touch
         touch.scrollScale = menuBarManager.scrollSpeed.scale
-        // The outer-ring gesture is vertical in the base layer and horizontal in Layer 1. Listen to
-        // Controller rather than only the sticky-layer HUD callback so momentary L1 holds work too.
-        engineController.onLayerChanged = { [weak touch] layer in
-            touch?.circularScrollAxis = layer == "L1" ? .horizontal : .vertical
+        // The outer-ring gesture changes with the active layer. Listen to Controller rather than only
+        // the sticky-layer HUD callback so momentary layer holds work too.
+        engineController.onLayerChanged = { layer in
+            activeCircularLayer = layer
+            applyCircularScrollAxis()
         }
         touch.onSwipe = { [weak self] direction in
             // Swipes are config-driven only. An unbound swipe does nothing — no native fallback,
@@ -357,6 +383,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             wheel.open()
             RemoteInputHandler.isAppWheelOpen = wheel.isOpen
         }
+        actionExecutor.onAppSwitcher = { stepInterval in
+            AppSwitcherControl.open(stepInterval: stepInterval)
+            RemoteInputHandler.isAppSwitcherOpen = AppSwitcherControl.active
+        }
         var latestAppWheelTouch: CGPoint?
         remoteInputHandler?.onAppWheelButton = { [weak wheel] button in
             guard let wheel = wheel else { return }
@@ -382,6 +412,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         touchHandler?.onAppWheelTouch = { [weak wheel] normalized in
             latestAppWheelTouch = normalized
             wheel?.selectByRemoteTouch(normalized)
+        }
+        remoteInputHandler?.onAppSwitcherButton = { button in
+            switch button {
+            case "ring.up", "ringUp", "ring.right", "ringRight":
+                AppSwitcherControl.step(1)
+            case "ring.down", "ringDown", "ring.left", "ringLeft":
+                AppSwitcherControl.step(-1)
+            case "select", "playPause", "tv":
+                AppSwitcherControl.commit()
+            default:
+                AppSwitcherControl.cancel()
+            }
+            RemoteInputHandler.isAppSwitcherOpen = AppSwitcherControl.active
         }
 
         cursorHighlighter = CursorHighlighter()
@@ -487,6 +530,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         remoteInputHandler?.holdCancelGrace = t.holdCancelGrace
         remoteInputHandler?.doubleTapWindow = t.doubleTapWindow
         remoteInputHandler?.spacesModeWindow = t.spacesModeWindow
+        actionExecutor?.appSwitcherStepInterval = t.appSwitcherStepInterval
         findCursorEnabled = t.findCursorEnabled
         focusFollower?.enabled = t.focusFollowsCursor
     }
@@ -519,6 +563,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             s.holdThreshold3 = t.holdThreshold3
             s.holdCancelGrace = t.holdCancelGrace
             s.doubleTapWindow = t.doubleTapWindow
+            s.appSwitcherStepInterval = t.appSwitcherStepInterval
             s.spacesModeWindow = t.spacesModeWindow
             s.findCursorEnabled = t.findCursorEnabled
             s.focusFollowsCursor = t.focusFollowsCursor

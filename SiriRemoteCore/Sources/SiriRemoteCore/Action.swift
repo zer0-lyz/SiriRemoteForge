@@ -28,6 +28,8 @@ public enum Action: Equatable {
     case closeWindow
     /// Summon the radial app launcher (`settings.appWheel`).
     case appWheel
+    /// Open the native macOS Cmd-Tab switcher and let the remote drive selection.
+    case appSwitcher
     // Auto-repeat a keystroke while the button is physically held (HID sends no auto-repeat).
     // `delay` = seconds before repeating starts; `interval` = seconds between repeats.
     case repeatKey(keys: String, delay: Double, interval: Double)
@@ -54,6 +56,7 @@ public extension Action {
         case .minimize:                 return "Minimise"
         case .closeWindow:              return "Close Window"
         case .appWheel:                 return "App Wheel"
+        case .appSwitcher:              return "App Switcher"
         case .mode(let to):             return "Mode: \(to)"
         case .layer(let name):          return "Layer: \(name)"
         case .repeatKey(let keys, _, _): return ActionLabel.keystroke(keys) + " ⟳"
@@ -188,6 +191,7 @@ extension Action: Decodable {
         case "minimize":    self = .minimize
         case "closeWindow": self = .closeWindow
         case "appWheel":    self = .appWheel
+        case "appSwitcher": self = .appSwitcher
         case "repeatKey":   self = .repeatKey(keys: try c.decode(String.self, forKey: .keys),
                                               delay: try c.decodeIfPresent(Double.self, forKey: .delay) ?? 0.3,
                                               interval: try c.decodeIfPresent(Double.self, forKey: .interval) ?? 0.045)
@@ -241,6 +245,8 @@ extension Action: Encodable {
             try c.encode("closeWindow", forKey: .action)
         case .appWheel:
             try c.encode("appWheel", forKey: .action)
+        case .appSwitcher:
+            try c.encode("appSwitcher", forKey: .action)
         case .space(let direction):
             try c.encode("space", forKey: .action)
             try c.encode(direction < 0 ? "left" : "right", forKey: .to)

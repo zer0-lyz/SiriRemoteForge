@@ -22,6 +22,7 @@ struct TuneSettings: Codable, Equatable {
     var holdThreshold3: Double
     var holdCancelGrace: Double
     var doubleTapWindow: Double
+    var appSwitcherStepInterval: Double
     var spacesModeWindow: Double
     var findCursorEnabled: Bool
     var focusFollowsCursor: Bool
@@ -42,7 +43,8 @@ struct TuneSettings: Codable, Equatable {
         cursorSpeed: 0.6, cursorDeadzone: 0.006, accelMin: 0.4, accelMax: 2.6,
         accelLowSpeed: 0.008, accelHighSpeed: 0.06, clickRiseThreshold: 0.1, pressMoveMax: 0.025,
         holdThreshold: 0.5, holdThreshold2: 1.0, holdThreshold3: 1.6, holdCancelGrace: 1.0,
-        doubleTapWindow: 0.3, spacesModeWindow: 5.0, findCursorEnabled: true,
+        doubleTapWindow: 0.3, appSwitcherStepInterval: 0.35,
+        spacesModeWindow: 5.0, findCursorEnabled: true,
         focusFollowsCursor: false,
         circularEnabled: true,
         circularMinRadius: 0.35, circularStartThreshold: 0.35, circularPixelsPerRadian: 75,
@@ -66,6 +68,7 @@ struct TuneSettings: Codable, Equatable {
         holdThreshold3 = s.holdThreshold3
         holdCancelGrace = s.holdCancelGrace
         doubleTapWindow = s.doubleTapWindow
+        appSwitcherStepInterval = s.appSwitcherStepInterval
         spacesModeWindow = s.spacesModeWindow
         findCursorEnabled = s.findCursorEnabled
         focusFollowsCursor = s.focusFollowsCursor
@@ -86,7 +89,7 @@ struct TuneSettings: Codable, Equatable {
          accelLowSpeed: Double, accelHighSpeed: Double, clickRiseThreshold: Double,
          pressMoveMax: Double, holdThreshold: Double, holdThreshold2: Double, holdThreshold3: Double,
          holdCancelGrace: Double,
-         doubleTapWindow: Double,
+         doubleTapWindow: Double, appSwitcherStepInterval: Double,
          spacesModeWindow: Double, findCursorEnabled: Bool, focusFollowsCursor: Bool,
          circularEnabled: Bool,
          circularMinRadius: Double, circularStartThreshold: Double, circularPixelsPerRadian: Double,
@@ -107,6 +110,7 @@ struct TuneSettings: Codable, Equatable {
         self.holdThreshold3 = holdThreshold3
         self.holdCancelGrace = holdCancelGrace
         self.doubleTapWindow = doubleTapWindow
+        self.appSwitcherStepInterval = appSwitcherStepInterval
         self.spacesModeWindow = spacesModeWindow
         self.findCursorEnabled = findCursorEnabled
         self.focusFollowsCursor = focusFollowsCursor

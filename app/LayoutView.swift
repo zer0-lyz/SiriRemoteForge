@@ -633,7 +633,8 @@ private struct ActionSlotEditor: View {
              applescript = "AppleScript", space = "切换桌面", brightness = "亮度",
              layer = "功能层", mode = "模式", repeatKey = "连续按键",
              fullscreen = "全屏", minimize = "最小化",
-             closeWindow = "关闭窗口", appWheel = "应用圆盘"
+             closeWindow = "关闭窗口", appWheel = "应用圆盘",
+             appSwitcher = "系统应用切换"
         var id: String { rawValue }
     }
 
@@ -673,6 +674,8 @@ private struct ActionSlotEditor: View {
                 Section("应用与网页") {
                     Text(Kind.launchApp.rawValue).tag(Kind.launchApp)
                     Text(Kind.openURL.rawValue).tag(Kind.openURL)
+                    Text(Kind.appWheel.rawValue).tag(Kind.appWheel)
+                    Text(Kind.appSwitcher.rawValue).tag(Kind.appSwitcher)
                 }
                 Section("脚本") {
                     Text(Kind.shell.rawValue).tag(Kind.shell)
@@ -705,6 +708,8 @@ private struct ActionSlotEditor: View {
             Text("点击窗口左上角的关闭按钮").foregroundStyle(.secondary).font(.system(size: 12))
         case .appWheel:
             Text("打开应用圆盘（settings.appWheel）").foregroundStyle(.secondary).font(.system(size: 12))
+        case .appSwitcher:
+            Text("打开系统 Cmd-Tab 切换器").foregroundStyle(.secondary).font(.system(size: 12))
         case .keystroke, .repeatKey:
             TextField("cmd+shift+t", text: $text).textFieldStyle(.roundedBorder).frame(width: 170)
                 .focused($focused).onSubmit(commit)
@@ -774,6 +779,7 @@ private struct ActionSlotEditor: View {
         case .minimize:               kind = .minimize
         case .closeWindow:            kind = .closeWindow
         case .appWheel:               kind = .appWheel
+        case .appSwitcher:            kind = .appSwitcher
         case .repeatKey(let k, let d, let i): kind = .repeatKey; text = k; repDelay = d; repInterval = i
         case .brightness(let v):      kind = .brightness; value = v
         }
@@ -811,6 +817,7 @@ private struct ActionSlotEditor: View {
         case .minimize:    return .minimize
         case .closeWindow: return .closeWindow
         case .appWheel:    return .appWheel
+        case .appSwitcher: return .appSwitcher
         case .layer:       return pick.isEmpty ? nil : .layer(pick)
         case .mode:        return pick.isEmpty ? nil : .mode(to: pick)
         case .brightness:  return .brightness(value)

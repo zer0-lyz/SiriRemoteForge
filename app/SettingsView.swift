@@ -324,6 +324,10 @@ struct SettingsView: View {
                    value: $model.tune.doubleTapWindow, range: 0.15...0.6,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
                    display: { String(format: "%.2fs", $0) })
+            slider(icon: "arrow.2.squarepath", title: "应用切换间隔",
+                   value: $model.tune.appSwitcherStepInterval, range: 0.15...0.8,
+                   minIcon: "hare.fill", maxIcon: "tortoise.fill",
+                   display: { String(format: "%.2fs", $0) })
             slider(icon: "rectangle.on.rectangle", title: "桌面切换超时",
                    value: $model.tune.spacesModeWindow, range: 2.0...15.0,
                    minIcon: "hare.fill", maxIcon: "tortoise.fill",
@@ -331,7 +335,7 @@ struct SettingsView: View {
         } header: {
             Text("按键")
         } footer: {
-            Text("长按时间决定按住多久触发 .hold 动作。双击速度决定第二次点击需要多快才算 .double。桌面切换超时用于控制进入桌面切换状态后多久自动退出。")
+            Text("长按时间决定按住多久触发 .hold 动作。双击速度决定第二次点击需要多快才算 .double。应用切换间隔控制 Cmd-Tab 选择应用时每跳一次的最短等待。桌面切换超时用于控制进入桌面切换状态后多久自动退出。")
         }
     }
 

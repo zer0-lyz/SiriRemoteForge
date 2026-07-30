@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../mic/driver/SiriRemoteMicShared.h"
+#include "SiriRemoteMicShared.h"
 
 static int gFileDescriptor = -1;
 static SRMSharedMemory *gShared = NULL;

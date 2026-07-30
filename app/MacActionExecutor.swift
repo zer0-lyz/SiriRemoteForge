@@ -9,12 +9,16 @@
 
 import Foundation
 import AppKit
+import Carbon.HIToolbox
 import CoreGraphics
 
 final class MacActionExecutor: ActionExecutor {
     /// Summon the radial launcher. A closure rather than a reference, so the executor stays free of
     /// anything that owns a window.
     var onAppWheel: (() -> Void)?
+    /// Open the native Cmd-Tab switcher. The input handler owns the modal remote routing.
+    var onAppSwitcher: ((_ stepInterval: TimeInterval) -> Void)?
+    var appSwitcherStepInterval: TimeInterval = 0.35
 
     private let media = MediaController()
 
@@ -44,6 +48,8 @@ final class MacActionExecutor: ActionExecutor {
             WindowControl.close()
         case .appWheel:
             onAppWheel?()
+        case .appSwitcher:
+            onAppSwitcher?(appSwitcherStepInterval)
         case .pushToTalk(let keys):
             // The press/release edge dispatch lives in RemoteInputHandler (both edges fire the
             // combo there and never reach the executor). This handles a stray dispatch — e.g. the
@@ -76,6 +82,77 @@ final class MacActionExecutor: ActionExecutor {
             NSLog("[siriRemote] unknown media key '\(key)'"); return
         }
         media.sendMediaKey(type)
+    }
+}
+
+enum AppSwitcherControl {
+    private static let source = CGEventSource(stateID: .combinedSessionState)
+    private static let commandFlag: CGEventFlags = .maskCommand
+    private static var stepInterval: CFTimeInterval = 0.35
+    private static var isOpen = false
+    private static var lastStepAt: CFTimeInterval = 0
+
+    static var active: Bool { isOpen }
+
+    static func open(stepInterval interval: TimeInterval) {
+        cancel()
+        isOpen = true
+        stepInterval = max(0.1, min(1.0, interval))
+        lastStepAt = CACurrentMediaTime()
+        post(key: kVK_Command, down: true, flags: commandFlag)
+        tapTab(backward: false)
+        rmDebug("🔄 app switcher: open")
+    }
+
+    static func step(_ direction: Int) {
+        guard isOpen else { return }
+        let now = CACurrentMediaTime()
+        guard now - lastStepAt >= stepInterval else {
+            rmDebug("🔄 app switcher: step throttled")
+            return
+        }
+        lastStepAt = now
+        tapTab(backward: direction < 0)
+        rmDebug(direction < 0 ? "🔄 app switcher: previous" : "🔄 app switcher: next")
+    }
+
+    static func commit() {
+        guard isOpen else { return }
+        post(key: kVK_Command, down: false, flags: [])
+        isOpen = false
+        lastStepAt = 0
+        rmDebug("🔄 app switcher: commit")
+    }
+
+    static func cancel() {
+        guard isOpen else { return }
+        tap(key: kVK_Escape, flags: commandFlag)
+        post(key: kVK_Command, down: false, flags: [])
+        isOpen = false
+        lastStepAt = 0
+        rmDebug("🔄 app switcher: cancel")
+    }
+
+    private static func tapTab(backward: Bool) {
+        if backward {
+            post(key: kVK_Shift, down: true, flags: [.maskCommand, .maskShift])
+            tap(key: kVK_Tab, flags: [.maskCommand, .maskShift])
+            post(key: kVK_Shift, down: false, flags: commandFlag)
+        } else {
+            tap(key: kVK_Tab, flags: commandFlag)
+        }
+    }
+
+    private static func tap(key: Int, flags: CGEventFlags) {
+        post(key: key, down: true, flags: flags)
+        usleep(10000)
+        post(key: key, down: false, flags: flags)
+    }
+
+    private static func post(key: Int, down: Bool, flags: CGEventFlags) {
+        let event = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(key), keyDown: down)
+        event?.flags = flags
+        event?.post(tap: .cghidEventTap)
     }
 }
 
@@ -121,6 +198,19 @@ enum Keys {
             e?.flags = f
             e?.post(tap: .cghidEventTap)
         }
+    }
+
+    static func synthesizeFlagged(_ combo: String) {
+        guard let parsed = KeyMap.parse(combo), let mainKey = parsed.mainKey else {
+            NSLog("[siriRemote] unknown flagged keystroke '\(combo)'"); return
+        }
+        let src = CGEventSource(stateID: .combinedSessionState)
+        let down = CGEvent(keyboardEventSource: src, virtualKey: mainKey, keyDown: true)
+        down?.flags = parsed.flags
+        let up = CGEvent(keyboardEventSource: src, virtualKey: mainKey, keyDown: false)
+        up?.flags = parsed.flags
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
     }
 
     // MARK: - Held keys (true auto-repeat, not rapid re-tapping)

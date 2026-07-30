@@ -116,6 +116,8 @@ class RemoteInputHandler {
     /// card, as every other hold. `isAppWheelOpen` is set by the app, which owns the overlay.
     static var isAppWheelOpen = false
     var onAppWheelButton: ((_ button: String) -> Void)?
+    static var isAppSwitcherOpen = false
+    var onAppSwitcherButton: ((_ button: String) -> Void)?
 
     /// Multi-stage hold progress, for the on-screen HUD. `onHoldBegan` carries every BOUND stage
     /// with its threshold and a short label for the action it would run; `onHoldEnded` reports which
@@ -673,6 +675,13 @@ class RemoteInputHandler {
         // of the very press that summoned it (which must not then toggle the layer).
         if RemoteInputHandler.isAppWheelOpen {
             if pressed { onAppWheelButton?(buttonName) }
+            return
+        }
+
+        // The native Cmd-Tab switcher is also modal while Command is held down. Every button belongs
+        // to it until the handler commits or cancels, so no app-specific binding leaks through.
+        if RemoteInputHandler.isAppSwitcherOpen {
+            if pressed { onAppSwitcherButton?(buttonName) }
             return
         }
 
@@ -1561,6 +1570,9 @@ class RemoteInputHandler {
         cancelHoldStages()    // and don't leave release-to-select stage timers pending
         cancelPendingSingles()   // and don't let a delayed single fire after disconnect
         disarmSpacesMode()    // and don't leave Spaces Mode armed with no device attached
+        if RemoteInputHandler.isAppSwitcherOpen {
+            onAppSwitcherButton?("cancel")
+        }
         // A physically-held momentary layer can't survive the device going away — unwind it and
         // revert to the sticky layer (if any). KEEP the sticky layer: BLE remotes disconnect on
         // idle, and a sticky toggle should persist across an idle reconnect, not silently drop.

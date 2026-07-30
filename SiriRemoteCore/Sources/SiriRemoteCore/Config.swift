@@ -29,6 +29,8 @@ public struct Config: Equatable {
         /// Apps on the radial launcher, in clockwise order from the top. Summoned by holding the
         /// layer key; empty disables it. Names as they appear in /Applications, e.g. "Google Chrome".
         public var appWheel: [String]
+        /// Minimum seconds between app selections while the native Cmd-Tab switcher is open.
+        public var appSwitcherStepInterval: Double
         public var clickRiseThreshold: Double
         public var pressMoveMax: Double
         // Velocity-based cursor acceleration (layered on top of cursorSpeed).
@@ -217,7 +219,7 @@ extension Config: Decodable {
 extension Config.Settings: Decodable {
     private enum K: String, CodingKey {
         case defaultMode, swipeVelocity, cursorSpeed, cursorDeadzone, circularScroll, holdThreshold
-        case holdThreshold2, holdThreshold3, holdCancelGrace, appWheel
+        case holdThreshold2, holdThreshold3, holdCancelGrace, appWheel, appSwitcherStepInterval
         case clickRiseThreshold, pressMoveMax
         case accelMin, accelMax, accelLowSpeed, accelHighSpeed
         case doubleTapWindow
@@ -238,6 +240,7 @@ extension Config.Settings: Decodable {
         holdThreshold3 = try c.decodeIfPresent(Double.self, forKey: .holdThreshold3) ?? 1.6
         holdCancelGrace = try c.decodeIfPresent(Double.self, forKey: .holdCancelGrace) ?? 1.0
         appWheel = try c.decodeIfPresent([String].self, forKey: .appWheel) ?? []
+        appSwitcherStepInterval = try c.decodeIfPresent(Double.self, forKey: .appSwitcherStepInterval) ?? 0.35
         clickRiseThreshold = try c.decodeIfPresent(Double.self, forKey: .clickRiseThreshold) ?? 0.1
         pressMoveMax = try c.decodeIfPresent(Double.self, forKey: .pressMoveMax) ?? 0.025
         accelMin = try c.decodeIfPresent(Double.self, forKey: .accelMin) ?? 0.4
@@ -310,6 +313,7 @@ extension Config.Settings: Encodable {
         try c.encode(holdThreshold3, forKey: .holdThreshold3)
         try c.encode(holdCancelGrace, forKey: .holdCancelGrace)
         try c.encode(appWheel, forKey: .appWheel)
+        try c.encode(appSwitcherStepInterval, forKey: .appSwitcherStepInterval)
         try c.encode(clickRiseThreshold, forKey: .clickRiseThreshold)
         try c.encode(pressMoveMax, forKey: .pressMoveMax)
         try c.encode(accelMin, forKey: .accelMin)

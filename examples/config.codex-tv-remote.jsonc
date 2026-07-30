@@ -6,8 +6,12 @@
     "com.apple.Terminal" : "terminal",
     "com.apple.finder" : "finder",
     "com.apple.iWork.Keynote" : "presentation",
-    "com.google.Chrome" : "browser",
+    "com.google.Chrome" : "chrome",
     "com.kingsoft.wpsoffice.mac" : "wps",
+    "com.kingsoft.wpsoffice.mac:sheet" : "wpsSheet",
+    "com.kingsoft.wpsoffice.mac:writer" : "wpsWriter",
+    "com.tencent.WeWorkMac" : "wechat",
+    "com.tencent.xinWeChat" : "wechat",
     "com.microsoft.Powerpoint" : "presentation",
     "com.microsoft.edgemac" : "browser",
     "com.openai.codex" : "codex",
@@ -90,9 +94,22 @@
     "codex" : {
       "button.menu" : {
         "action" : "keystroke",
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除一字"
+      },
+      "button.menu.hold" : {
+        "action" : "keystroke",
+        "after" : 0.5,
         "icon" : "arrow.uturn.backward",
         "keys" : "cmd+z",
-        "label" : "撤销"
+        "label" : "撤销编辑"
+      },
+      "button.mute" : {
+        "action" : "applescript",
+        "icon" : "trash",
+        "label" : "清空输入",
+        "script" : "tell application \"System Events\"\nkeystroke \"a\" using command down\nkey code 51\nend tell"
       },
       "button.playPause" : {
         "action" : "keystroke",
@@ -102,9 +119,9 @@
       },
       "button.power" : {
         "action" : "keystroke",
-        "icon" : "delete.left",
-        "keys" : "delete",
-        "label" : "删除一字"
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭窗口"
       },
       "button.siri" : {
         "action" : "pushToTalk",
@@ -124,30 +141,129 @@
         "keys" : "escape",
         "label" : "取消"
       },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "下翻页"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "上翻页"
+      },
       "inherits" : "global",
       "ring.down" : {
         "action" : "keystroke",
-        "icon" : "arrow.down",
-        "keys" : "down",
-        "label" : "下一行"
+        "icon" : "bubble.left.and.bubble.right.fill",
+        "keys" : "cmd+shift+]",
+        "label" : "下个对话"
       },
       "ring.left" : {
         "action" : "keystroke",
-        "icon" : "arrow.left",
-        "keys" : "left",
-        "label" : "光标左移"
+        "icon" : "sidebar.left",
+        "keys" : "cmd+b",
+        "label" : "切换边栏"
       },
       "ring.right" : {
         "action" : "keystroke",
-        "icon" : "arrow.right",
-        "keys" : "right",
-        "label" : "光标右移"
+        "icon" : "sidebar.right",
+        "keys" : "opt+cmd+b",
+        "label" : "显示/隐藏侧边栏"
       },
       "ring.up" : {
         "action" : "keystroke",
-        "icon" : "arrow.up",
-        "keys" : "up",
-        "label" : "上一行"
+        "icon" : "bubble.left.and.bubble.right",
+        "keys" : "cmd+shift+[",
+        "label" : "上个对话"
+      }
+    },
+    "chrome" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "chevron.left",
+        "keys" : "cmd+[",
+        "label" : "网页后退"
+      },
+      "button.menu.double" : {
+        "action" : "keystroke",
+        "icon" : "chevron.right",
+        "keys" : "cmd+]",
+        "label" : "网页前进"
+      },
+      "button.mute" : {
+        "action" : "keystroke",
+        "icon" : "magnifyingglass",
+        "keys" : "cmd+l",
+        "label" : "搜索/地址栏"
+      },
+      "button.mute.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.clockwise",
+        "keys" : "cmd+r",
+        "label" : "刷新页面"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.circle",
+        "keys" : "enter",
+        "label" : "前往"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "minus.magnifyingglass",
+        "keys" : "cmd+-",
+        "label" : "缩小"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "plus.magnifyingglass",
+        "keys" : "cmd+=",
+        "label" : "放大"
+      },
+      "inherits" : "global",
+      "ring.down.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "cmd+down",
+        "label" : "到底部"
+      },
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "快速下滚"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "cmd+opt+left",
+        "label" : "上个标签"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "cmd+opt+right",
+        "label" : "下个标签"
+      },
+      "ring.up.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "cmd+up",
+        "label" : "到顶部"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "快速上滚"
       }
     },
     "finder" : {
@@ -157,12 +273,73 @@
         "keys" : "cmd+up",
         "label" : "上级文件夹"
       },
+      "button.menu.double" : {
+        "action" : "keystroke",
+        "icon" : "chevron.left",
+        "keys" : "cmd+[",
+        "label" : "返回上一层历史"
+      },
+      "button.menu.hold" : {
+        "action" : "keystroke",
+        "after" : 0.8,
+        "icon" : "trash",
+        "keys" : "cmd+delete",
+        "label" : "移到废纸篓"
+      },
+      "button.mute" : {
+        "action" : "keystroke",
+        "icon" : "eye",
+        "keys" : "space",
+        "label" : "快速预览"
+      },
+      "button.mute.double" : {
+        "action" : "keystroke",
+        "icon" : "sidebar.left",
+        "keys" : "cmd+opt+s",
+        "label" : "显示/隐藏边栏"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "folder.badge.plus",
+        "keys" : "cmd+down",
+        "label" : "打开"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭窗口"
+      },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "doc.on.clipboard",
+        "keys" : "cmd+v",
+        "label" : "粘贴"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "doc.on.doc",
+        "keys" : "cmd+c",
+        "label" : "复制"
+      },
       "inherits" : "global",
+      "ring.down.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "向下翻页"
+      },
       "ring.down" : {
         "action" : "keystroke",
         "icon" : "arrow.down",
         "keys" : "down",
         "label" : "下移"
+      },
+      "ring.left.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "ctrl+shift+tab",
+        "label" : "上个标签页"
       },
       "ring.left" : {
         "action" : "keystroke",
@@ -170,17 +347,111 @@
         "keys" : "left",
         "label" : "左移"
       },
+      "ring.right.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "ctrl+tab",
+        "label" : "下个标签页"
+      },
       "ring.right" : {
         "action" : "keystroke",
         "icon" : "arrow.right",
         "keys" : "right",
         "label" : "右移"
       },
+      "ring.up.double" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "向上翻页"
+      },
       "ring.up" : {
         "action" : "keystroke",
         "icon" : "arrow.up",
         "keys" : "up",
         "label" : "上移"
+      }
+    },
+    "wechat" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除一字"
+      },
+      "button.menu.double" : {
+        "action" : "keystroke",
+        "icon" : "escape",
+        "keys" : "escape",
+        "label" : "取消"
+      },
+      "button.menu.hold" : {
+        "action" : "keystroke",
+        "after" : 0.5,
+        "icon" : "arrow.uturn.backward",
+        "keys" : "cmd+z",
+        "label" : "撤销输入"
+      },
+      "button.mute" : {
+        "action" : "keystroke",
+        "icon" : "magnifyingglass",
+        "keys" : "cmd+f",
+        "label" : "搜索"
+      },
+      "button.mute.double" : {
+        "action" : "keystroke",
+        "icon" : "square.and.pencil",
+        "keys" : "cmd+n",
+        "label" : "新建聊天"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "paperplane.fill",
+        "keys" : "enter",
+        "label" : "发送/确认"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭窗口"
+      },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "下翻记录"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "上翻记录"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "down",
+        "label" : "下个会话"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.to.line",
+        "keys" : "shift+tab",
+        "label" : "左侧焦点"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.to.line",
+        "keys" : "tab",
+        "label" : "右侧焦点"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "up",
+        "label" : "上个会话"
       }
     },
     "global" : {
@@ -280,10 +551,9 @@
         "label" : "应用切换"
       },
       "button.tv.double" : {
-        "action" : "keystroke",
+        "action" : "appSwitcher",
         "icon" : "arrow.2.squarepath",
-        "keys" : "cmd+tab",
-        "label" : "上个应用"
+        "label" : "系统应用切换"
       },
       "button.tv.hold" : {
         "action" : "appWheel",
@@ -345,24 +615,6 @@
         "command" : "open -a 'Mission Control'",
         "icon" : "rectangle.3.group",
         "label" : "调度中心"
-      },
-      "swipe.down" : {
-        "action" : "keystroke",
-        "icon" : "arrow.down.to.line",
-        "keys" : "pagedown",
-        "label" : "下一页"
-      },
-      "swipe.up" : {
-        "action" : "keystroke",
-        "icon" : "arrow.up.to.line",
-        "keys" : "pageup",
-        "label" : "上一页"
-      },
-      "tap.two" : {
-        "action" : "mouse",
-        "icon" : "contextualmenu.and.cursorarrow",
-        "label" : "右键",
-        "op" : "rightclick"
       }
     },
     "music" : {
@@ -423,6 +675,12 @@
         "keys" : "right",
         "label" : "下一页"
       }
+    },
+    "selectText" : {
+      "inherits" : "global"
+    },
+    "sheetHorizontal" : {
+      "inherits" : "global"
     },
     "terminal" : {
       "button.menu" : {
@@ -494,6 +752,194 @@
         "keys" : "ctrl+tab",
         "label" : "下个标签"
       }
+    },
+    "wpsSheet" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除"
+      },
+      "button.menu.hold" : {
+        "action" : "keystroke",
+        "after" : 0.5,
+        "icon" : "arrow.uturn.backward",
+        "keys" : "cmd+z",
+        "label" : "撤销"
+      },
+      "button.mute" : {
+        "action" : "layer",
+        "icon" : "arrow.left.and.right",
+        "label" : "左右滚动",
+        "to" : "sheetHorizontal"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "tablecells",
+        "keys" : "ctrl+pagedown",
+        "label" : "右侧 Sheet"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "tablecells",
+        "keys" : "ctrl+pageup",
+        "label" : "左侧 Sheet"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "向下翻页"
+      },
+      "sheetHorizontal.button.mute" : {
+        "action" : "layer",
+        "icon" : "arrow.up.and.down",
+        "label" : "上下滚动",
+        "to" : "sheetHorizontal"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "ctrl+shift+tab",
+        "label" : "左侧标签页"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "ctrl+tab",
+        "label" : "右侧标签页"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "向上翻页"
+      }
+    },
+    "wpsWriter" : {
+      "button.menu" : {
+        "action" : "keystroke",
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除"
+      },
+      "button.menu.hold" : {
+        "action" : "keystroke",
+        "after" : 0.5,
+        "icon" : "arrow.uturn.backward",
+        "keys" : "cmd+z",
+        "label" : "撤销"
+      },
+      "button.mute" : {
+        "action" : "layer",
+        "icon" : "selection.pin.in.out",
+        "label" : "选择文字",
+        "to" : "selectText"
+      },
+      "button.power" : {
+        "action" : "keystroke",
+        "icon" : "xmark.square",
+        "keys" : "cmd+w",
+        "label" : "关闭标签"
+      },
+      "button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.doc",
+        "keys" : "cmd+opt+down",
+        "label" : "下一条修订"
+      },
+      "button.volumeDown.double" : {
+        "action" : "keystroke",
+        "icon" : "checkmark.circle",
+        "keys" : "cmd+opt+shift+a",
+        "label" : "接受修订"
+      },
+      "button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "text.bubble",
+        "keys" : "cmd+opt+a",
+        "label" : "插入批注"
+      },
+      "button.volumeUp.double" : {
+        "action" : "applescript",
+        "icon" : "text.bubble",
+        "label" : "插入批注",
+        "script" : "tell application \"System Events\"\ntell application process \"wpsoffice\"\nclick menu item \"批注\" of menu 1 of menu bar item \"插入\" of menu bar 1\nend tell\nend tell"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "pagedown",
+        "label" : "向下翻页"
+      },
+      "selectText.button.power" : {
+        "action" : "keystroke",
+        "icon" : "escape",
+        "keys" : "escape",
+        "label" : "取消选择"
+      },
+      "selectText.button.volumeDown" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down.to.line",
+        "keys" : "shift+pagedown",
+        "label" : "向下扩选"
+      },
+      "selectText.button.volumeUp" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "shift+pageup",
+        "label" : "向上扩选"
+      },
+      "selectText.ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "shift+down",
+        "label" : "向下扩选"
+      },
+      "selectText.ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "shift+left",
+        "label" : "向左扩选"
+      },
+      "selectText.ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "shift+right",
+        "label" : "向右扩选"
+      },
+      "selectText.ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "shift+up",
+        "label" : "向上扩选"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left.square",
+        "keys" : "ctrl+shift+tab",
+        "label" : "左侧标签页"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.square",
+        "keys" : "ctrl+tab",
+        "label" : "右侧标签页"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up.to.line",
+        "keys" : "pageup",
+        "label" : "向上翻页"
+      }
     }
   },
   "settings" : {
@@ -511,6 +957,7 @@
       "东方财富经典版",
       "Calendar"
     ],
+    "appSwitcherStepInterval" : 0.8,
     "circularScroll" : {
       "accelCurve" : 1,
       "accelHighSpeed" : 0.07,
