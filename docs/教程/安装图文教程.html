@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>把 Apple TV 遥控器变成 Mac 万能遥控器 · 小白安装图文教程</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #0f172a 0%, #1e3a5f 40%, #eef4fb 40.2%, #f5f8fc 100%);
+    color: #1e293b;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* 封面 */
+  .hero {
+    text-align: center;
+    color: #fff;
+    padding: 48px 20px 40px;
+  }
+  .hero .badge {
+    display:inline-block; background: rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.35);
+    border-radius: 999px; padding: 6px 16px; font-size: 14px; margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 34px; line-height:1.3; margin-bottom: 12px; font-weight: 800; }
+  .hero p { font-size: 17px; color: rgba(255,255,255,.9); }
+  .hero .cover { margin-top: 24px; border-radius: 20px; width: 320px; max-width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+
+  /* 卡片 */
+  .card {
+    background:#fff; border-radius: 20px; padding: 28px 28px;
+    margin-top: 22px; box-shadow: 0 8px 30px rgba(15,23,42,.08);
+    border: 1px solid #e2e8f0;
+  }
+  .step-no {
+    display:inline-flex; align-items:center; justify-content:center;
+    width: 44px; height: 44px; border-radius: 14px;
+    background: linear-gradient(135deg,#2563eb,#38bdf8); color:#fff;
+    font-size: 20px; font-weight:800; margin-right: 12px; vertical-align: middle;
+  }
+  h2 { font-size: 24px; margin: 18px 0 8px; font-weight: 800; }
+  .card h3 { font-size: 20px; margin: 4px 0 14px; display:inline; vertical-align:middle; }
+  p, li { font-size: 16.5px; }
+  ul { padding-left: 22px; margin: 10px 0; }
+  li { margin: 6px 0; }
+  .tip {
+    background:#f0f9ff; border-left: 4px solid #38bdf8;
+    padding: 12px 16px; border-radius: 10px; margin: 12px 0; font-size: 15px;
+  }
+  .warn {
+    background:#fff7ed; border-left: 4px solid #f97316;
+    padding: 12px 16px; border-radius: 10px; margin: 12px 0; font-size: 15px;
+  }
+  code {
+    background:#f1f5f9; border:1px solid #e2e8f0; padding: 1px 7px;
+    border-radius: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 14.5px;
+  }
+  .img { text-align:center; margin: 16px 0 6px; }
+  .img img { max-width: 100%; border-radius: 14px; box-shadow: 0 6px 24px rgba(15,23,42,.12); }
+  .img .cap { font-size: 13.5px; color:#64748b; margin-top:8px; }
+
+  /* 下载按钮 */
+  .dl { text-align:center; margin: 24px 0 8px; }
+  .dl a {
+    display:inline-block; background: linear-gradient(135deg,#16a34a,#22c55e);
+    color:#fff; font-size: 19px; font-weight:800; text-decoration:none;
+    padding: 16px 36px; border-radius: 16px; box-shadow: 0 10px 30px rgba(34,197,94,.35);
+  }
+  .dl .sub { font-size: 14px; color:#64748b; margin-top:10px; }
+
+  /* 条件网格 */
+  .conds { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:6px; }
+  .cond { background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; text-align:center; }
+  .cond .ic { font-size:30px; }
+  .cond b { display:block; margin-top:6px; font-size:16px; }
+  .cond span { font-size:14px; color:#475569; }
+
+  /* 语音二选一 */
+  .voice { display:grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:14px; }
+  .vopt { border:2px solid #dbeafe; border-radius:16px; padding:18px; background:#f8fbff; }
+  .vopt h4 { font-size:17px; margin-bottom:8px; }
+  .vopt .src { font-size:13px; color:#2563eb; }
+  .vopt ul { font-size:14.5px; }
+
+  .faq details { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 16px; margin:10px 0; }
+  .faq summary { font-weight:700; cursor:pointer; font-size:16px; }
+  .faq details p { font-size:15px; margin-top:8px; color:#475569; }
+
+  .foot { text-align:center; margin-top: 40px; color:#64748b; font-size:14px; }
+  .foot a { color:#2563eb; text-decoration:none; }
+  .pill { display:inline-block; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;
+         border-radius:999px; padding:3px 12px; font-size:13px; margin:2px 4px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="badge">🎁 开源免费 · 一键安装包</span>
+  <h1>把吃灰的 Apple TV 遥控器<br>变成 Mac 万能遥控器</h1>
+  <p>5 步装好 · 全程只需双击和点鼠标</p>
+  <img class="cover" src="配图/封面.png" alt="封面">
+</div>
+
+<div class="wrap">
+
+  <!-- 需要什么 -->
+  <div class="card">
+    <h2>🙋 先确认这三样</h2>
+    <div class="conds">
+      <div class="cond"><div class="ic">💻</div><b>一台 Mac</b><span>macOS 13 及以上<br>Apple 芯片（M1 及以后）</span></div>
+      <div class="cond"><div class="ic">🎮</div><b>第三代遥控器</b><span>Apple TV 遥控器（2022 款，<br>USB-C 充电口的那款）</span></div>
+      <div class="cond"><div class="ic">🔗</div><b>能连蓝牙</b><span>Mac 有蓝牙功能即可<br>（Mac 基本都自带）</span></div>
+    </div>
+    <div class="tip">💡 不确定遥控器型号？看充电口：是 <b>USB-C</b> 的就是第三代，这个教程支持它。</div>
+  </div>
+
+  <!-- 第1步 -->
+  <div class="card">
+    <div class="step-no">1</div><h3>下载一键安装包</h3>
+    <p style="margin-top:10px">点下面绿色按钮，下载一个小文件（约 3.6 MB），然后解压。不用懂任何命令行。</p>
+    <div class="dl">
+      <a href="https://github.com/zer0-lyz/SiriRemoteForge/releases/download/v1.1.0-macmini-beta.2/HyperVibe-Full-Setup-1.1.0-macmini-beta.2-arm64.zip" target="_blank">⬇️ 下载一键安装包</a>
+      <div class="sub">文件名：HyperVibe-Full-Setup-1.1.0-macmini-beta.2-arm64.zip</div>
+    </div>
+    <div class="img"><img src="配图/步骤-下载安装.png" alt="下载安装包步骤"><div class="cap">下载 → 解压 → 准备打开</div></div>
+    <div class="warn">⚠️ 如果在浏览器里下载时被提示"此文件不安全"，点「保留」即可——这是开源个人项目，没经过 App Store 审核，所以会提示，放心使用。</div>
+  </div>
+
+  <!-- 第2步 -->
+  <div class="card">
+    <div class="step-no">2</div><h3>右键打开安装器</h3>
+    <ul>
+      <li>解压后，你会看到 <b>HyperVibe Setup.app</b>。</li>
+      <li>对它<b>点右键（或双指点按触控板）</b>，选 <b>「打开」</b>。</li>
+      <li>如果弹出"来自互联网的应用程序"提示，再点一次<b>「打开」</b>就好。</li>
+    </ul>
+    <div class="tip">💡 为什么不直接双击？因为这是开源自制的应用，没在 App Store 上架，macOS 第一次需要右键打开放行。以后就不用了。</div>
+  </div>
+
+  <!-- 第3步 -->
+  <div class="card">
+    <div class="step-no">3</div><h3>输入密码，自动安装</h3>
+    <ul>
+      <li>安装器会让你输入一次 <b>Mac 开机密码</b>。</li>
+      <li>它会把 <b>App、中文按键预设、虚拟麦克风</b> 一次装好，还会自动备份你原来的配置（不用担心搞坏）。</li>
+      <li>整个过程约 1 分钟，装完会生成一份《安装检查.txt》告诉你结果。</li>
+    </ul>
+    <div class="tip">💡 装好之后，会在「应用程序」里出现 <b>HyperVibe</b> 和一个卸载器，配置也已经是调好的中文版，不用手动设置。</div>
+  </div>
+
+  <!-- 第4步 -->
+  <div class="card">
+    <div class="step-no">4</div><h3>授权两个权限</h3>
+    <p>打开「系统设置 → 隐私与安全性」，找到列表里的 <b>HyperVibe</b>，把这两项开关打开：</p>
+    <ul>
+      <li><b>辅助功能</b>（让它能帮你按键盘、动鼠标）</li>
+      <li><b>输入监控</b>（让它能收到遥控器的按键）</li>
+    </ul>
+    <div class="img"><img src="配图/权限与蓝牙.png" alt="权限授权与蓝牙配对"><div class="cap">左侧：开两个权限开关　右侧：配对遥控器</div></div>
+    <div class="warn">⚠️ 如果开关打不开：先在「辅助功能」里点 + 号，手动把「应用程序 → HyperVibe」加进去；或者先关掉再重开一次。这一步是 macOS 的安全机制，必须手动确认。</div>
+  </div>
+
+  <!-- 第5步 -->
+  <div class="card">
+    <div class="step-no">5</div><h3>蓝牙配对遥控器</h3>
+    <ul>
+      <li>打开「系统设置 → 蓝牙」。</li>
+      <li>把遥控器<b>靠近 Mac</b>，在设备列表里找到 <b>Siri Remote</b>，点连接。</li>
+      <li>如果找不到：<b>同时按住遥控器的「返回键 + 音量上」几秒</b>，进入配对模式再试。</li>
+    </ul>
+    <div class="tip">💡 配对成功后，你就能用遥控器的触控板移动鼠标了！先试着滑一滑、点一点。</div>
+  </div>
+
+  <!-- 第6步 -->
+  <div class="card">
+    <div class="step-no">6</div><h3>开玩！试试这些</h3>
+    <ul>
+      <li>🖱️ <b>触控板</b>：滑动=移动鼠标，外圈转圈=滚动页面</li>
+      <li>🔄 <b>TV 键</b>：按一下=应用启动器圆盘，双击=右键，长按=切换应用</li>
+      <li>⌨️ <b>返回键</b>：浏览器里=网页后退，Codex 里=删除一字，微信里=删字……跟着应用自动变</li>
+      <li>🎵 <b>播放键</b>：播放/暂停；<b>音量键</b>：音量加减；<b>静音键</b>：静音</li>
+      <li>🖥️ <b>窗口</b>：返回键长按=关窗口，某些应用里可一键分屏</li>
+    </ul>
+    <div class="tip">🎉 到这里就已经能用了！接下来是进阶彩蛋——<b>语音输入</b>，强烈推荐试试。</div>
+  </div>
+
+  <!-- 语音配合 -->
+  <div class="card" style="border:2px solid #7dd3fc">
+    <h2>🎙️ 彩蛋：按住遥控器 Siri 键，直接说话打字</h2>
+    <p>装好语音输入法后，你只需<b>按住遥控器顶部的 Siri 键说话</b>，文字就会自动出现在 Mac 上——不想打字时超好用。</p>
+    <div class="img"><img src="配图/语音配合.png" alt="语音输入配合"><div class="cap">按住 Siri 键 → 说话 → 文字自动打出</div></div>
+    <h3 style="display:block; margin:16px 0 4px">第一步：装一个语音输入法（二选一，都免费）</h3>
+    <div class="voice">
+      <div class="vopt">
+        <h4>🥇 推荐：豆包输入法 <span class="src">（字节跳动出品）</span></h4>
+        <ul>
+          <li>官网下载：<b>shurufa.doubao.com</b></li>
+          <li>语音识别准、支持方言和中英混说</li>
+          <li>识别结果直接上屏，体验最顺</li>
+        </ul>
+      </div>
+      <div class="vopt">
+        <h4>🥈 备选：微信电脑版自带语音 <span class="src">（微信 4.1.7+）</span></h4>
+        <ul>
+          <li>不用装额外软件，升级微信到最新版即可</li>
+          <li>微信里打开「设置 → 快捷键」可自定义</li>
+          <li>任何应用里都能用</li>
+        </ul>
+      </div>
+    </div>
+    <h3 style="display:block; margin:20px 0 4px">第二步：把语音快捷键改成「右 Option ⌥」</h3>
+    <ul>
+      <li><b>豆包输入法</b>：菜单栏豆包图标 → 偏好设置 → 语音 → 把触发键设为 <code>右 Option</code>。</li>
+      <li><b>微信</b>：微信 → 设置 → 快捷键 → 语音输入，改成 <code>右 Option</code>。</li>
+    </ul>
+    <div class="tip">💡 为什么用「右 Option」？因为键盘左边的 Option 常被占用，右边的几乎用不到，正好留给语音。</div>
+    <h3 style="display:block; margin:20px 0 4px">第三步：开用！</h3>
+    <ul>
+      <li>把光标点到想输入的地方（聊天框、文档、搜索框都行）。</li>
+      <li><b>按住遥控器 Siri 键</b>，说想打的内容，松开就上屏。</li>
+      <li>遥控器上还有一键听写快捷键：Siri 键<b>双击</b>触发、<b>三击</b>取消。</li>
+    </ul>
+  </div>
+
+  <!-- FAQ -->
+  <div class="card faq">
+    <h2>❓ 常见问题</h2>
+    <details open>
+      <summary>按键完全没反应？</summary>
+      <p>① 先确认遥控器已经在蓝牙里连上；② 确认「应用程序」里的 HyperVibe 在运行（第一次要手动打开一次）；③ 确认辅助功能和输入监控两个开关都开了；④ 如果重装过，先退出再打开 HyperVibe。</p>
+    </details>
+    <details>
+      <summary>下载时提示"文件不安全 / 无法打开"？</summary>
+      <p>这是 macOS 对"非 App Store 应用"的正常提示，不是病毒。点「保留」，然后右键 → 打开即可。</p>
+    </details>
+    <details>
+      <summary>我的遥控器是旧款（Lightning 接口）能用吗？</summary>
+      <p>本安装包目前支持 <b>第三代（USB-C）</b>遥控器。旧款未来版本再看。</p>
+    </details>
+    <details>
+      <summary>语音输入没反应？</summary>
+      <p>① 确认豆包/微信的语音快捷键真的改成了「右 Option」；② 试试在键盘上直接按一下右 Option 验证输入法是否正常；③ 确认遥控器 Siri 键能按出「右 Option」（可在系统「设置 → 键盘 → 修饰键」里把右 Option 临时改成别的键测试）。</p>
+    </details>
+    <details>
+      <summary>这个工具安全吗？收费吗？</summary>
+      <p>完全免费、开源（GPL v3 协议，代码都在 GitHub 上公开可查）。它需要「辅助功能」等权限是因为要帮你模拟按键和移动鼠标，这是这类工具的常规做法，介意可先看代码再装。</p>
+    </details>
+  </div>
+
+  <div class="foot">
+    项目主页：<a href="https://github.com/zer0-lyz/SiriRemoteForge" target="_blank">github.com/zer0-lyz/SiriRemoteForge</a><br>
+    <span class="pill">免费</span><span class="pill">开源 GPL v3</span><span class="pill">macOS 13+</span><span class="pill">Apple 芯片</span><br><br>
+    有问题可以在 GitHub 仓库提 issue，我会看到后答复
+  </div>
+
+</div>
+</body>
+</html>

@@ -724,8 +724,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// The touch ring seeks only on a video client's PLAYBACK page (profile key
-    /// "<bundle>:playing"). Browsing/list pages fall back to normal vertical scrolling.
+    /// "<bundle>:playing"), or inside BuhoLaunchpad where the ring moves the app-grid selection
+    /// (Left/Right) like a TV remote. Browsing/list pages fall back to normal vertical scrolling.
     private static func seekAxis(forProfileKey key: String) -> Bool {
+        if key == "com.drbuho.BuhoLaunchpad.Launcher" { return true }
         guard key.hasSuffix(":playing") else { return false }
         let baseID = key.split(separator: ":").first.map(String.init) ?? key
         return videoAppBundleIDs.contains(baseID)

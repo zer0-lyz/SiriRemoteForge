@@ -12,6 +12,7 @@
     "com.kingsoft.wpsoffice.mac:writer" : "wpsWriter",
     "com.tencent.WeWorkMac" : "wechat",
     "com.tencent.xinWeChat" : "wechat",
+    "com.drbuho.BuhoLaunchpad.Launcher" : "buhoLaunchpad",
     "com.bilibili.bilibiliPC" : "video",
     "com.tencent.tenvideo" : "video",
     "com.youku.mac" : "video",
@@ -739,6 +740,39 @@
         "label" : "单击快进/按住连续快进"
       }
     },
+    "buhoLaunchpad" : {
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right.circle",
+        "keys" : "enter",
+        "label" : "打开"
+      },
+      "inherits" : "global",
+      "ring.down" : {
+        "action" : "keystroke",
+        "icon" : "arrow.down",
+        "keys" : "down",
+        "label" : "下移选择"
+      },
+      "ring.left" : {
+        "action" : "keystroke",
+        "icon" : "arrow.left",
+        "keys" : "left",
+        "label" : "左移选择"
+      },
+      "ring.right" : {
+        "action" : "keystroke",
+        "icon" : "arrow.right",
+        "keys" : "right",
+        "label" : "右移选择"
+      },
+      "ring.up" : {
+        "action" : "keystroke",
+        "icon" : "arrow.up",
+        "keys" : "up",
+        "label" : "上移选择"
+      }
+    },
     "viewer" : {
       "inherits" : "global",
       "ring.down" : {
@@ -989,7 +1023,7 @@
       "WeChat",
       "企业微信",
       "东方财富经典版",
-      "搜索"
+      "BuhoLaunchpad"
     ],
     "appSwitcherStepInterval" : 0.8,
     "circularScroll" : {
