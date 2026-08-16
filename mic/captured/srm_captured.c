@@ -40,10 +40,11 @@ extern char **environ;
 #define ROUTER_PATH   "/Library/Application Support/SiriRemoteMic/srm_router"
 #define BT_DEBUG_DOMAIN "/Library/Preferences/com.apple.MobileBluetooth.debug"
 
-// A brief grace period before tearing the pipeline down after the last app closes the device.
-// Apps routinely close-then-reopen the input (device format changes, call renegotiation); without
-// this every such blip would restart PacketLogger. 3 s is imperceptible yet absorbs the churn.
-#define STOP_DEBOUNCE_SECONDS 3
+// Keep the capture pipeline warm briefly after the last app closes the device. Codex opens and
+// closes its input around individual push-to-talk turns; restarting PacketLogger for every turn
+// adds a measured 1-4 s before the next utterance can reach the router. The file-backed capture
+// remains transient and is removed when the grace period expires.
+#define STOP_DEBOUNCE_SECONDS 30
 
 static pid_t g_packetlogger = -1;
 static pid_t g_router = -1;

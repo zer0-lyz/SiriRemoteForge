@@ -168,6 +168,16 @@ class CursorController {
         event.post(tap: .cghidEventTap)
     }
 
+    /// Move the cursor to an absolute position (global Quartz coords). Used to aim the pointer at a
+    /// window's title bar before starting a drag.
+    func moveCursor(to point: CGPoint) {
+        let target = clampToDisplays(point, from: CGEvent(source: nil)?.location ?? point)
+        let eventType: CGEventType = isDragging ? .leftMouseDragged : .mouseMoved
+        guard let event = CGEvent(mouseEventSource: nil, mouseType: eventType,
+                                  mouseCursorPosition: target, mouseButton: .left) else { return }
+        event.post(tap: .cghidEventTap)
+    }
+
     func performClick() {
         let currentPosition = CGEvent(source: nil)?.location ?? .zero
 

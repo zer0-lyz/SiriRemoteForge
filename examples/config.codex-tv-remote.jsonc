@@ -12,6 +12,9 @@
     "com.kingsoft.wpsoffice.mac:writer" : "wpsWriter",
     "com.tencent.WeWorkMac" : "wechat",
     "com.tencent.xinWeChat" : "wechat",
+    "com.bilibili.bilibiliPC" : "video",
+    "com.tencent.tenvideo" : "video",
+    "com.youku.mac" : "video",
     "com.microsoft.Powerpoint" : "presentation",
     "com.microsoft.edgemac" : "browser",
     "com.openai.codex" : "codex",
@@ -126,13 +129,13 @@
       "button.siri" : {
         "action" : "pushToTalk",
         "icon" : "mic.fill",
-        "keys" : "ropt+/",
+        "keys" : "ropt",
         "label" : "按住听写"
       },
       "button.siri.double" : {
         "action" : "keystroke",
         "icon" : "mic.fill",
-        "keys" : "ropt+/",
+        "keys" : "ropt",
         "label" : "听写快捷键"
       },
       "button.siri.triple" : {
@@ -182,15 +185,15 @@
     "chrome" : {
       "button.menu" : {
         "action" : "keystroke",
-        "icon" : "chevron.left",
-        "keys" : "cmd+[",
-        "label" : "网页后退"
+        "icon" : "delete.left",
+        "keys" : "delete",
+        "label" : "删除一字"
       },
       "button.menu.double" : {
         "action" : "keystroke",
-        "icon" : "chevron.right",
-        "keys" : "cmd+]",
-        "label" : "网页前进"
+        "icon" : "chevron.left",
+        "keys" : "cmd+[",
+        "label" : "网页后退"
       },
       "button.mute" : {
         "action" : "keystroke",
@@ -530,7 +533,7 @@
       "button.siri" : {
         "action" : "pushToTalk",
         "icon" : "mic.fill",
-        "keys" : "ropt+/",
+        "keys" : "ropt",
         "label" : "按住听写"
       },
       "button.siri.double" : {
@@ -548,18 +551,19 @@
       "button.tv" : {
         "action" : "appWheel",
         "icon" : "circle.grid.3x3.fill",
-        "label" : "应用切换"
+        "label" : "应用圆盘"
       },
       "button.tv.double" : {
-        "action" : "appSwitcher",
-        "icon" : "arrow.2.squarepath",
-        "label" : "系统应用切换"
+        "action" : "mouse",
+        "icon" : "cursorarrow.click.2",
+        "label" : "右键",
+        "op" : "rightclick"
       },
       "button.tv.hold" : {
-        "action" : "appWheel",
+        "action" : "appSwitcher",
         "after" : 0.6,
-        "icon" : "circle.grid.3x3.fill",
-        "label" : "应用圆盘"
+        "icon" : "arrow.2.squarepath",
+        "label" : "系统应用切换"
       },
       "button.volumeDown" : {
         "action" : "media",
@@ -703,6 +707,36 @@
         "icon" : "arrow.uturn.backward.square",
         "keys" : "cmd+shift+t",
         "label" : "恢复标签"
+      }
+    },
+    "video" : {
+      "button.menu.double" : {
+        "action" : "fullscreen",
+        "icon" : "arrow.up.left.and.arrow.down.right",
+        "label" : "切换全屏"
+      },
+      "button.playPause" : {
+        "action" : "keystroke",
+        "icon" : "playpause.fill",
+        "keys" : "space",
+        "label" : "播放/暂停"
+      },
+      "inherits" : "global",
+      "ring.left" : {
+        "action" : "repeatKey",
+        "delay" : 0.4,
+        "icon" : "gobackward.15",
+        "interval" : 0.1,
+        "keys" : "left",
+        "label" : "单击快退/按住连续快退"
+      },
+      "ring.right" : {
+        "action" : "repeatKey",
+        "delay" : 0.4,
+        "icon" : "goforward.15",
+        "interval" : 0.1,
+        "keys" : "right",
+        "label" : "单击快进/按住连续快进"
       }
     },
     "viewer" : {
@@ -955,7 +989,7 @@
       "WeChat",
       "企业微信",
       "东方财富经典版",
-      "Calendar"
+      "搜索"
     ],
     "appSwitcherStepInterval" : 0.8,
     "circularScroll" : {

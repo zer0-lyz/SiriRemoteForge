@@ -70,7 +70,11 @@ struct LayoutView: View {
                 // The editor is DOCKED below the scroll (not appended after the long list), so
                 // selecting a row always shows its editor in the viewport instead of a screen below.
                 VStack(spacing: 0) {
-                    ScrollView { pageBody }
+                    ScrollView(.vertical) {
+                        pageBody
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxWidth: .infinity)
                     if selectedKey != nil, onSave != nil {
                         Divider()
                         editorPanel.background(.bar)
@@ -92,6 +96,7 @@ struct LayoutView: View {
             stage
             foot
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 8)
     }
 
@@ -138,7 +143,7 @@ struct LayoutView: View {
 
     // MARK: - Hub (one chip per mode)
 
-    private var hub: some View {
+    @ViewBuilder private var hub: some View {
         let apps = config.appsByMode
         let def = config.defaultModeName
         let layers = Set(layerNames)   // layer modes are edited via the layer selector, not as apps
@@ -147,7 +152,21 @@ struct LayoutView: View {
             if b == def { return false }
             return chipTitle(a, apps: apps, isDefault: false) < chipTitle(b, apps: apps, isDefault: false)
         }
-        return HStack(spacing: 8) {
+        if scrolls {
+            ScrollView(.horizontal, showsIndicators: false) {
+                hubRow(apps: apps, defaultMode: def, modes: modes)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 14).padding(.bottom, 6)
+        } else {
+            hubRow(apps: apps, defaultMode: def, modes: modes)
+                .padding(.top, 14).padding(.bottom, 6)
+        }
+    }
+
+    @ViewBuilder private func hubRow(apps: [String: [String]], defaultMode def: String,
+                                     modes: [String]) -> some View {
+        HStack(spacing: 8) {
             Text("应用")
                 .font(.system(size: 11, weight: .heavy)).tracking(1)
                 .foregroundStyle(.secondary)
@@ -158,9 +177,8 @@ struct LayoutView: View {
                      count: config.modes[m]?.bindings.count ?? 0)
             }
             addChip
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 26).padding(.top, 14).padding(.bottom, 6)
+        .padding(.horizontal, 26)
     }
 
     private func chip(mode m: String, title: String, icon: String, count: Int) -> some View {
@@ -313,13 +331,19 @@ struct LayoutView: View {
                     .frame(maxWidth: 200)
             }
             .padding(.horizontal, 8).padding(.top, 6)
+            .frame(width: 166, alignment: .top)
 
             VStack(spacing: 16) {
                 ForEach(Self.groups, id: \.name) { group in
                     groupCard(group)
                 }
             }
+            // Keep the mapping column finite even when an off-screen renderer does not provide a
+            // width proposal. A finite intrinsic width prevents the whole page from drifting left
+            // and being clipped on both sides.
+            .frame(minWidth: 320, maxWidth: 660, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 16)
     }
 
@@ -339,6 +363,7 @@ struct LayoutView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func mappingRow(_ row: InputRow) -> some View {
@@ -349,12 +374,16 @@ struct LayoutView: View {
                 Text(row.key).font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
-            .frame(minWidth: 150, alignment: .leading)
+            .frame(minWidth: 130, maxWidth: 170, alignment: .leading)
             Spacer(minLength: 8)
             Text(r.label)
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(r.kind == .system ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minWidth: 40, maxWidth: 190, alignment: .trailing)
+                .layoutPriority(1)
             tag(r)
         }
         .padding(.horizontal, 16).padding(.vertical, 10)

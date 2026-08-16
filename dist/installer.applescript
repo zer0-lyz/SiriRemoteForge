@@ -17,6 +17,16 @@ end fileExists
 on run
 	set myPath to POSIX path of (path to me)
 	set payload to myPath & "Contents/Resources/payload"
+	set packageMode to "public"
+	try
+		set packageInfo to do shell script ("/usr/bin/grep '^Package mode:' " & quoted form of (payload & "/BUILD-INFO.txt") & " | /usr/bin/awk '{print $3}'")
+		if packageInfo is "personal" or packageInfo is "preset" then set packageMode to packageInfo
+	end try
+
+	if (do shell script "/usr/bin/uname -m") is not "arm64" then
+		display dialog "当前安装包仅支持 Apple 芯片 Mac（M1/M2/M3/M4 及后续型号）。" buttons {"好"} default button "好" with icon stop
+		return
+	end if
 
 	display dialog ("HyperVibe 安装器" & return & return & ¬
 		"将安装:" & return & ¬
@@ -46,12 +56,14 @@ on run
 		end if
 	end if
 
-	-- Default config for THIS user, without clobbering an existing one.
-	set cfgDir to (POSIX path of (path to home folder)) & ".config/siriremote"
-	if not fileExists(cfgDir & "/config.jsonc") then
-		do shell script ("/bin/mkdir -p " & quoted form of cfgDir & ¬
-			" && /bin/cp " & quoted form of (payload & "/config.jsonc") & " " & quoted form of (cfgDir & "/config.jsonc"))
-	end if
+	-- Public packages preserve an existing config. Personal migration packages back it up and
+	-- replace it with the known-good mapping bundled by the owner.
+	try
+		set configResult to do shell script ("/bin/bash " & quoted form of (payload & "/install_user_config.sh") & " " & quoted form of payload & " " & quoted form of packageMode)
+	on error errMsg
+		display dialog ("系统组件已安装，但映射配置失败：" & return & return & errMsg) buttons {"好"} default button "好" with icon caution
+		return
+	end try
 
 	-- The three permissions macOS will not let an app grant itself: open each pane, guide the toggle.
 	display dialog ("系统组件已安装 ✅" & return & return & ¬
@@ -67,9 +79,19 @@ on run
 	display dialog "③ 麦克风(Microphone)" & return & "打开 HyperVibe 的开关(内置麦回退 / 采集需要;首次运行也会自动弹窗)。" buttons {"完成"} default button "完成" with title "权限 3/3"
 
 	do shell script "/usr/bin/open -a /Applications/HyperVibe.app"
+	delay 4
+	set reportPath to (POSIX path of (path to downloads folder)) & "HyperVibe-安装检查.txt"
+	try
+		set checkResult to do shell script ("/bin/bash " & quoted form of (payload & "/post_install_check.sh") & " " & quoted form of payload & " " & quoted form of reportPath)
+	on error errMsg
+		set checkResult to "检查报告生成失败：" & errMsg
+	end try
+
 	display dialog ("安装完成 🎉" & return & return & ¬
 		"HyperVibe 已启动(看菜单栏图标)。" & return & ¬
+		"映射配置：" & configResult & return & ¬
 		"卸载器位于“应用程序”文件夹。" & return & ¬
+		"安装检查已保存到“下载/HyperVibe-安装检查.txt”。" & return & ¬
 		"在 蓝牙 设置里配对你的 Siri Remote 即可使用。" & return & return & ¬
 		"若遥控器麦克风没声音:确认已装 PacketLogger,然后重新打开正在使用麦克风的 App。") ¬
 		buttons {"好"} default button "好" with title "HyperVibe Setup"

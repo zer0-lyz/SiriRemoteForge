@@ -28,6 +28,10 @@ class RemoteInputHandler {
     private let cursorController: CursorController
     private weak var menuBarManager: MenuBarManager?
     private var devices: [IOHIDDevice] = []
+    // Bluetooth HID interfaces can re-enumerate independently. Keep failed opens alive for a short
+    // retry window instead of waiting for the next physical reconnect or an app restart.
+    private var openRetryWork: [String: DispatchWorkItem] = [:]
+    private let openRetryDelays: [TimeInterval] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
 
     // --- Mic/voice capture diagnostic (enabled with `--capture-mic`). The 3rd-gen remote streams
     //     its microphone as large HID input reports (the button interface is 3 bytes; there's a
@@ -186,7 +190,8 @@ class RemoteInputHandler {
     private var pushToTalkPending: [String: DispatchWorkItem] = [:]
     /// How long a push-to-talk button must be held before its opening hotkey fires — gives the remote
     /// mic + capture pipeline a beat to spin up and rejects accidental brushes. (User-chosen 0.2 s.)
-    private let pushToTalkActivationDelay: TimeInterval = 0.2
+    // Keep a short tap from opening dictation, while avoiding a noticeable pause before speech.
+    private let pushToTalkActivationDelay: TimeInterval = 0.1
     /// Quick taps of a push-to-talk button (released before the activation delay, so they never open
     /// dictation) still drive DOUBLE-TAP: two within `doubleTapWindow` fire the button's `.double`
     /// binding (e.g. Enter). buttonName → when the last such quick tap ended. Hold and double-tap
@@ -208,6 +213,9 @@ class RemoteInputHandler {
 
     /// Called on any button activity; use to trigger trackpad re-scan after remote wake.
     var onButtonActivity: (() -> Void)?
+    /// Raw physical Siri-button state. This bypasses tap/hold mapping so native microphone PTT
+    /// begins on key-down and always ends on key-up, even when an app-specific action is bound.
+    var onSiriButtonState: ((_ pressed: Bool) -> Void)?
     
     // First press after connection: do not perform action (sound already played at connect).
     private var isFirstPressAfterConnection = false
@@ -233,6 +241,14 @@ class RemoteInputHandler {
     /// The press currently down is the one that DROPPED a sticky drag. Its release must not also
     /// click: the drop already sent mouseUp, and an extra click would land wherever you dropped.
     private var isDropPress = false
+    /// Window arrange mode: geometry captured when the mode armed, so ring.down can restore it.
+    private var windowArrangeOriginalFrame: CGRect?
+    /// Window arrange mode: the window LOCKED when the mode armed. Every arrange acts on this
+    /// target, never on whatever app the mouse happens to be over afterwards.
+    private var windowArrangeTarget: WindowControl.Target?
+    /// ring.down single-tap restore is deferred to distinguish a double-tap (minimize to Dock).
+    private var pendingWindowDownWork: DispatchWorkItem?
+    private var lastWindowDownTime: CFTimeInterval = 0
 
     /// Select is hardcoded rather than config-driven, but its hold must still LOOK like every other
     /// hold — the same progress card, not a second style of its own. These are the two faces it
@@ -309,21 +325,54 @@ class RemoteInputHandler {
         self.menuBarManager = menuBarManager
     }
     
+    private func interfaceKey(_ device: IOHIDDevice) -> String {
+        let location = IOHIDDeviceGetProperty(device, kIOHIDLocationIDKey as CFString) as? Int ?? -1
+        let interface = IOHIDDeviceGetProperty(device, "bInterfaceNumber" as CFString) as? Int ?? -1
+        let page = IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsagePageKey as CFString) as? Int ?? -1
+        let usage = IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsageKey as CFString) as? Int ?? -1
+        return "\(location):\(interface):\(page):\(usage)"
+    }
+
+    private func closeDevice(_ device: IOHIDDevice) {
+        IOHIDDeviceRegisterInputValueCallback(device, nil, nil)
+        IOHIDDeviceUnscheduleFromRunLoop(device, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        IOHIDDeviceClose(device, IOOptionBits(kIOHIDOptionsTypeNone))
+    }
+
     func setRemoteDevice(_ device: IOHIDDevice?) {
         guard let device = device else {
             releaseAllHeldKeys()
-            for d in devices {
-                IOHIDDeviceRegisterInputValueCallback(d, nil, nil)
-                IOHIDDeviceUnscheduleFromRunLoop(d, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-                IOHIDDeviceClose(d, IOOptionBits(kIOHIDOptionsTypeNone))
-            }
+            for work in openRetryWork.values { work.cancel() }
+            openRetryWork.removeAll()
+            for d in devices { closeDevice(d) }
             devices.removeAll()
             isFirstPressAfterConnection = false
             return
         }
-        
+
         guard !devices.contains(where: { $0 == device }) else { return }
-        
+
+        let key = interfaceKey(device)
+        openRetryWork[key]?.cancel()
+        openRetryWork.removeValue(forKey: key)
+
+        // If macOS gives us a fresh object for an interface that re-enumerated without a clean
+        // removal callback, retire the stale object before attaching the replacement.
+        if let staleIndex = devices.firstIndex(where: { interfaceKey($0) == key }) {
+            let stale = devices.remove(at: staleIndex)
+            closeDevice(stale)
+            rmDebug("🛰 HID interface replaced key=\(key)")
+        }
+
+        if !attachDevice(device) {
+            scheduleOpenRetry(device, attempt: 0)
+        }
+    }
+
+    /// Open one interface and install all callbacks. Returns false when macOS has not made the
+    /// interface available yet; the caller then schedules a bounded retry.
+    @discardableResult
+    private func attachDevice(_ device: IOHIDDevice) -> Bool {
         let usagePage = IOHIDDeviceGetProperty(
             device, kIOHIDPrimaryUsagePageKey as CFString
         ) as? Int ?? -1
@@ -338,48 +387,71 @@ class RemoteInputHandler {
         let openOptions = IOOptionBits(
             shouldSeize ? kIOHIDOptionsTypeSeizeDevice : kIOHIDOptionsTypeNone
         )
-        let openResult = IOHIDDeviceOpen(device, openOptions)
+        var openResult = IOHIDDeviceOpen(device, openOptions)
+        var didSeize = shouldSeize
 
-        if openResult == kIOReturnSuccess {
-            rmDebug(String(format: "%@ HID device usage=0x%X/0x%X (vendor=0x%X product=0x%X)",
-                  shouldSeize ? "🔒 SEIZED" : "🔓 OPENED non-exclusive",
-                  usagePage,
-                  usage,
-                  IOHIDDeviceGetProperty(device, kIOHIDVendorIDKey as CFString) as? Int ?? 0,
-                  IOHIDDeviceGetProperty(device, kIOHIDProductIDKey as CFString) as? Int ?? 0))
-            IOHIDDeviceRegisterInputValueCallback(device, inputValueCallback, Unmanaged.passUnretained(self).toOpaque())
-            if captureMic || activateMic || nativePushToTalk || directPushToTalk {
-                registerReportCapture(device)
-            }
-            if dumpReports { dumpHIDReports(device) }
-            if activateMic {
-                // Give macOS a moment to finish HOGP setup / notification subscribe before writing.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                    self?.sendMicActivation(device)
-                }
-            }
-            IOHIDDeviceScheduleWithRunLoop(device, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-            devices.append(device)
-            isFirstPressAfterConnection = true
-        } else {
+        if openResult != kIOReturnSuccess {
             rmDebug(String(format: "⚠️ FAILED to %@ HID device usage=0x%X/0x%X (IOReturn=0x%X) — retrying non-exclusive",
                            shouldSeize ? "seize" : "open", usagePage, usage, openResult))
-            if IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess {
-                IOHIDDeviceRegisterInputValueCallback(device, inputValueCallback, Unmanaged.passUnretained(self).toOpaque())
-                if captureMic || activateMic || nativePushToTalk || directPushToTalk {
-                    registerReportCapture(device)
-                }
-                if dumpReports { dumpHIDReports(device) }
-                if activateMic {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                        self?.sendMicActivation(device)
-                    }
-                }
-                IOHIDDeviceScheduleWithRunLoop(device, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-                devices.append(device)
-                isFirstPressAfterConnection = true
+            openResult = IOHIDDeviceOpen(device, IOOptionBits(kIOHIDOptionsTypeNone))
+            didSeize = false
+        }
+
+        guard openResult == kIOReturnSuccess else {
+            rmDebug(String(format: "⚠️ HID interface still unavailable usage=0x%X/0x%X (IOReturn=0x%X)",
+                           usagePage, usage, openResult))
+            return false
+        }
+
+        let wasEmpty = devices.isEmpty
+        rmDebug(String(format: "%@ HID device usage=0x%X/0x%X (vendor=0x%X product=0x%X)",
+              didSeize ? "🔒 SEIZED" : "🔓 OPENED non-exclusive",
+              usagePage,
+              usage,
+              IOHIDDeviceGetProperty(device, kIOHIDVendorIDKey as CFString) as? Int ?? 0,
+              IOHIDDeviceGetProperty(device, kIOHIDProductIDKey as CFString) as? Int ?? 0))
+        IOHIDDeviceRegisterInputValueCallback(device, inputValueCallback, Unmanaged.passUnretained(self).toOpaque())
+        if captureMic || activateMic || nativePushToTalk || directPushToTalk {
+            registerReportCapture(device)
+        }
+        if dumpReports { dumpHIDReports(device) }
+        if activateMic {
+            // Give macOS a moment to finish HOGP setup / notification subscribe before writing.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.sendMicActivation(device)
             }
         }
+        IOHIDDeviceScheduleWithRunLoop(device, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        devices.append(device)
+        // Only the transition from no open interfaces to the first one needs the connect guard.
+        if wasEmpty { isFirstPressAfterConnection = true }
+        return true
+    }
+
+    private func scheduleOpenRetry(_ device: IOHIDDevice, attempt: Int) {
+        guard attempt < openRetryDelays.count else {
+            rmDebug("⚠️ HID interface retry limit reached key=\(interfaceKey(device))")
+            return
+        }
+
+        let key = interfaceKey(device)
+        guard openRetryWork[key] == nil else { return }
+        let delay = openRetryDelays[attempt]
+        rmDebug(String(format: "🔄 HID interface retry %d/%d in %.2fs key=%@",
+                       attempt + 1, openRetryDelays.count, delay, key))
+        let work = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.openRetryWork.removeValue(forKey: key)
+            guard !self.devices.contains(where: { self.interfaceKey($0) == key }) else { return }
+
+            if self.attachDevice(device) {
+                rmDebug("✅ HID interface recovered key=\(key)")
+            } else {
+                self.scheduleOpenRetry(device, attempt: attempt + 1)
+            }
+        }
+        openRetryWork[key] = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
     
     /// Register a raw input-report callback (voice-capture diagnostic). The buffer must outlive the
@@ -595,6 +667,10 @@ class RemoteInputHandler {
         }
         buttonState[buttonName] = isPressed
 
+        if buttonName == "siri" {
+            onSiriButtonState?(isPressed)
+        }
+
         // The remote can sleep between initial enumeration and a later Siri press. Re-send the
         // gen-3 enable byte at the physical start of every diagnostic trial so a stale activation
         // cannot explain an otherwise empty voice stream.
@@ -748,6 +824,43 @@ class RemoteInputHandler {
                 return
             default:
                 break                        // other buttons pass through normally, no disarm
+            }
+        }
+
+        // 1.5) Window arrange mode: while a sticky drag is active (long-press Select to move a
+        //      window), the ring arranges the window instead of sending arrow keys. Left/right/up
+        //      only RE-ARRANGE and keep the mode open so the user can try another layout before
+        //      committing; down (minimize) and the Select drop are the deliberate exits. The
+        //      release edge is swallowed here too, so a tap of the direction cannot ALSO fire its
+        //      normal binding after the arrange already happened.
+        if isStickyDragging {
+            switch tapKey {
+            case "ring.up":
+                if pressed {
+                    if let t = windowArrangeTarget { WindowControl.maximize(target: t) }
+                    else { WindowControl.maximize() }
+                    print("🖥 Window mode: maximize")
+                }
+                return
+            case "ring.down":
+                if pressed { handleWindowArrangeDown() }
+                return
+            case "ring.left":
+                if pressed {
+                    if let t = windowArrangeTarget { WindowControl.snapLeft(target: t) }
+                    else { WindowControl.snapLeft() }
+                    print("🖥 Window mode: snap left")
+                }
+                return
+            case "ring.right":
+                if pressed {
+                    if let t = windowArrangeTarget { WindowControl.snapRight(target: t) }
+                    else { WindowControl.snapRight() }
+                    print("🖥 Window mode: snap right")
+                }
+                return
+            default:
+                break
             }
         }
 
@@ -1302,6 +1415,35 @@ class RemoteInputHandler {
         spacesModeTimer = nil
     }
 
+    /// ring.down inside window arrange mode: one tap restores the window's pre-arrange size,
+    /// a second tap within the double-tap window minimizes it to the Dock instead. Single-tap
+    /// centers the window at a comfortable size (never returns to a previous full-screen state),
+    /// so the user can then tile it left/right without first un-fullscreening manually.
+    private func handleWindowArrangeDown() {
+        let now = CACurrentMediaTime()
+        if now - lastWindowDownTime < doubleTapWindow {
+            pendingWindowDownWork?.cancel()
+            pendingWindowDownWork = nil
+            lastWindowDownTime = 0
+            endStickyDrag()
+            if let t = windowArrangeTarget { WindowControl.minimize(target: t) }
+            else { WindowControl.minimize() }
+            print("🖥 Window mode: minimize (double-tap down)")
+            return
+        }
+        lastWindowDownTime = now
+        pendingWindowDownWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self = self, self.isStickyDragging else { return }
+            self.pendingWindowDownWork = nil
+            if let t = self.windowArrangeTarget { WindowControl.restoreCentered(target: t) }
+            else { WindowControl.restoreCentered() }
+            print("🖥 Window mode: center")
+        }
+        pendingWindowDownWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapWindow, execute: work)
+    }
+
     /// The event key for the nth consecutive tap: 1 → `<key>`, 2 → `.double`, 3 → `.triple`.
     private func tapVariant(_ tapKey: String, _ n: Int) -> String {
         switch n {
@@ -1403,6 +1545,11 @@ class RemoteInputHandler {
         cursorController.isDragging = false
         cursorController.mouseUp()
         onStickyDrag?(false)
+        pendingWindowDownWork?.cancel()
+        pendingWindowDownWork = nil
+        lastWindowDownTime = 0
+        windowArrangeOriginalFrame = nil
+        windowArrangeTarget = nil
     }
 
     private let dumpPress = CommandLine.arguments.contains("--dump-press")
@@ -1446,6 +1593,33 @@ class RemoteInputHandler {
                 self.isDragging = true
                 self.isStickyDragging = true
                 self.cursorController.isDragging = true
+                // LOCK the window once, right here. Every later arrange (ring up/left/right/down)
+                // must act on THIS window even if the pointer ends up over another app.
+                // Prefer the window UNDER THE CURSOR: the user points at the window they want to
+                // arrange, which is not always macOS's frontmost app (e.g. after dragging a window
+                // to an external display). Fall back to the frontmost window when the cursor is not
+                // over any real window.
+                let target = WindowControl.targetUnderCursor() ?? WindowControl.focusedWindow()
+                self.windowArrangeTarget = target
+                self.windowArrangeOriginalFrame = target.flatMap(WindowControl.frame(of:))
+                if let t = target {
+                    rmDebug("🖥 window mode locked: \(t.app.localizedName ?? "?") frame="
+                          + String(describing: self.windowArrangeOriginalFrame ?? .zero))
+                } else {
+                    rmDebug("🖥 window mode locked: no target")
+                }
+                // Aim at the frontmost window's title bar before pressing, so the hold drags the
+                // WINDOW instead of grabbing whatever happened to be under the cursor. Skip when
+                // the window cannot be measured (e.g. a panel) or is full-screen — there is no
+                // title bar to grab there, so fall back to dragging in place.
+                if let frame = self.windowArrangeOriginalFrame,
+                   let screen = NSScreen.main?.visibleFrame,
+                   frame.width > 160, frame.height > 120,
+                   frame.height < screen.height - 20 {
+                    let titlePoint = CGPoint(x: frame.midX, y: frame.minY + 14)
+                    self.cursorController.moveCursor(to: titlePoint)
+                    rmDebug("🖥 drag: aiming at title bar \(Int(titlePoint.x)),\(Int(titlePoint.y))")
+                }
                 self.cursorController.mouseDown()
                 self.onStickyDrag?(true)
             }
@@ -1553,6 +1727,9 @@ class RemoteInputHandler {
     /// `Keys.synthesize` posts down and up in one synchronous call, so a disconnect cannot land
     /// between them.)
     private func releaseAllHeldKeys() {
+        if buttonState["siri"] == true {
+            onSiriButtonState?(false)
+        }
         // Before clearing the state, end every press that is still open. Losing the device ends a
         // press with no release at all, so nothing it armed would otherwise be cancelled — a Select
         // press interrupted inside its 0.5s drag window posted mouseDown AFTER this cleanup ran,

@@ -8,13 +8,58 @@
 import AppKit
 import Carbon.HIToolbox
 import CoreGraphics
+import CoreAudio
 import Darwin
 
 class MediaController {
 
+    static let shared = MediaController()
+
     func sendMediaKey(_ keyType: MediaKeyInterceptor.MediaKeyType) {
         guard let nxCode = nxKeyCode(for: keyType) else { return }
         postSystemDefinedKey(nxKeyCode: nxCode)
+    }
+
+    /// Current mute state of the default output device, or nil when the device does not expose it.
+    static func defaultOutputMuted() -> Bool? {
+        guard let deviceID = defaultOutputDeviceID() else { return nil }
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain)
+        var muted: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &muted) == noErr else {
+            return nil
+        }
+        return muted != 0
+    }
+
+    /// Set the mute state of the default output device. Returns false when unsupported.
+    @discardableResult
+    static func setDefaultOutputMuted(_ muted: Bool) -> Bool {
+        guard let deviceID = defaultOutputDeviceID() else { return false }
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain)
+        var value: UInt32 = muted ? 1 : 0
+        return AudioObjectSetPropertyData(
+            deviceID, &addr, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value) == noErr
+    }
+
+    private static func defaultOutputDeviceID() -> AudioDeviceID? {
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &deviceID) == noErr else {
+            return nil
+        }
+        return deviceID
     }
 
     private func nxKeyCode(for keyType: MediaKeyInterceptor.MediaKeyType) -> Int32? {

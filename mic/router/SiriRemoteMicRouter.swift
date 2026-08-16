@@ -105,11 +105,14 @@ private final class Router {
     private var previousSequence: UInt16?
     private var prebufferedSamples = 0
     private var producerPublished = false
+    private var lastVoiceFrameNanos: UInt64?
     private var wavSamples: [Int16] = []
     private(set) var stats = RouterStats()
 
     // Three 20 ms packets absorb normal BLE scheduling jitter before CoreAudio begins pulling.
     private let prebufferTarget = 3 * 960
+    // A normal Siri release stops the BLE notifications without terminating the router.
+    private let voiceIdleTimeoutNanos: UInt64 = 150_000_000
 
     init(options: RouterOptions) throws {
         self.options = options
@@ -153,6 +156,7 @@ private final class Router {
 
     func consume(_ frame: RemoteVoiceFrame) throws {
         stats.voiceFrames += 1
+        lastVoiceFrameNanos = DispatchTime.now().uptimeNanoseconds
 
         if let previous = previousSequence {
             let distance = Int(frame.sequence &- previous)
@@ -186,6 +190,18 @@ private final class Router {
             let duration = Double(samples.count) / 48000.0
             usleep(useconds_t(duration * 1_000_000.0))
         }
+    }
+
+    private func endVoiceSegmentIfIdle() {
+        guard options.writeRing, producerPublished, let lastVoiceFrameNanos else { return }
+        let now = DispatchTime.now().uptimeNanoseconds
+        guard now &- lastVoiceFrameNanos >= voiceIdleTimeoutNanos else { return }
+
+        srm_ring_writer_set_active(0)
+        producerPublished = false
+        prebufferedSamples = 0
+        previousSequence = nil
+        self.lastVoiceFrameNanos = nil
     }
 
     private func publish(_ samples: [Int16]) throws {
@@ -241,6 +257,7 @@ private final class Router {
             } else if n == 0 {
                 if options.exitOnEOF { break }
                 if gInterrupted != 0 { break }
+                endVoiceSegmentIfIdle()
                 usleep(4000)                 // 4 ms: tail -f poll for the next flush
             } else {
                 if errno == EINTR { continue }

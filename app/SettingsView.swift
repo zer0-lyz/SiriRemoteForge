@@ -59,7 +59,11 @@ struct SettingsView: View {
         }
         // Flexible height (not fixed) so the window can be shrunk to fit smaller displays — the
         // inner ScrollView/Form then scroll instead of the content being clipped.
-        .frame(width: tab == .layout ? 900 : 452)
+        // Layout is a two-column view. Keep a usable minimum, but let it shrink with the window so
+        // the remote and mapping cards never become a wider, clipped canvas on smaller displays.
+        .frame(minWidth: tab == .layout ? 620 : 452,
+               idealWidth: tab == .layout ? 900 : 452,
+               maxWidth: .infinity)
         .frame(minHeight: 480, idealHeight: 900, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.2), value: tab)
         // Polling start/stop lives in SettingsWindowController — `.onDisappear` never fires for

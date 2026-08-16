@@ -32,7 +32,9 @@ final class SettingsWindowController {
             win.titleVisibility = .hidden
             win.isMovableByWindowBackground = true
             win.isReleasedWhenClosed = false
-            win.contentMinSize = NSSize(width: 452, height: 480)
+            // The layout tab needs room for the remote preview and one readable mapping column.
+            // LayoutView remains fluid above this minimum instead of overflowing horizontally.
+            win.contentMinSize = NSSize(width: 620, height: 480)
             win.center()
             // Don't open taller than the screen (a 13" display has ~900pt usable).
             if let vis = win.screen?.visibleFrame ?? NSScreen.main?.visibleFrame,

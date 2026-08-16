@@ -16,6 +16,7 @@
 //
 
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 // MARK: - Model
@@ -239,7 +240,11 @@ struct AppWheelView: View {
                 let r = (model.innerRadius + model.outerRadius) / 2
                 let on = model.highlighted == i
                 Group {
-                    if let icon = model.icons[name] {
+                    if AppWheelController.isSpotlightItem(name) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 44, weight: .medium))
+                            .foregroundStyle(.white)
+                    } else if let icon = model.icons[name] {
                         Image(nsImage: icon).resizable().frame(width: 54, height: 54)
                     } else {
                         Image(systemName: "app.dashed").font(.system(size: 40))
@@ -273,7 +278,7 @@ struct AppWheelView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                 } else {
-                    Text("移到某个方向")
+                    Text("移动到目标")
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.75))
                 }
@@ -365,6 +370,13 @@ final class AppWheelController {
     let model = AppWheelModel()
     private(set) var isOpen = false
 
+    /// The app-wheel entry that opens the system search instead of launching an app.
+    static let spotlightItem = "搜索"
+
+    static func isSpotlightItem(_ name: String) -> Bool {
+        name == spotlightItem || name == "@spotlight" || name == "Spotlight"
+    }
+
     private var window: NSWindow?
     private var followTimer: Timer?
     /// Wheel centre in Quartz coordinates (top-left origin), fixed for the life of one summon.
@@ -449,6 +461,15 @@ final class AppWheelController {
             close()
             return
         }
+        if Self.isSpotlightItem(app) {
+            rmDebug("🎡 app wheel: opening system search")
+            close()
+            // `open Spotlight.app` only touches the background service and never shows the search
+            // bar. The search field is summoned by the system shortcut, so synthesize Cmd+Space —
+            // the same keystroke the user would type. (Confirmed on this machine to open search.)
+            Keys.synthesize("cmd+space")
+            return
+        }
         guard let url = ActionVisual.applicationURL(named: app) else {
             rmDebug("🎡 app wheel: \(app) not installed")
             reportNotInstalled(app)
@@ -456,7 +477,15 @@ final class AppWheelController {
         }
         rmDebug("🎡 app wheel: launching \(app)")
         close()
-        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { runningApp, error in
+            if let error = error {
+                rmDebug("🎡 app wheel: launch failed \(app): \(error.localizedDescription)")
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                Self.moveCursorIntoFrontWindow(of: runningApp)
+            }
+        }
     }
 
     /// Feedback for a not-installed pick: freeze the selection (the outcome is decided), name it as
@@ -522,5 +551,61 @@ final class AppWheelController {
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         win.contentView = NSHostingView(rootView: AppWheelView(model: model))
         window = win
+    }
+
+    private static func moveCursorIntoFrontWindow(of app: NSRunningApplication?) {
+        let targetApp = app ?? NSWorkspace.shared.frontmostApplication
+        guard let targetApp else { return }
+        if !targetApp.isActive {
+            targetApp.activate(options: [.activateIgnoringOtherApps])
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            let point = focusedWindowPoint(pid: targetApp.processIdentifier) ?? fallbackScreenPoint()
+            moveCursor(to: point)
+            rmDebug("🎡 app wheel: cursor moved into \(targetApp.localizedName ?? "?")")
+        }
+    }
+
+    private static func focusedWindowPoint(pid: pid_t) -> CGPoint? {
+        let axApp = AXUIElementCreateApplication(pid)
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focused) == .success,
+              let raw = focused,
+              CFGetTypeID(raw) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        let window = raw as! AXUIElement
+        var posValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &posValue) == .success,
+              AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let pos = posValue,
+              let size = sizeValue else {
+            return nil
+        }
+        var origin = CGPoint.zero
+        var dimensions = CGSize.zero
+        guard AXValueGetValue(pos as! AXValue, .cgPoint, &origin),
+              AXValueGetValue(size as! AXValue, .cgSize, &dimensions),
+              dimensions.width > 80,
+              dimensions.height > 80 else {
+            return nil
+        }
+        return CGPoint(
+            x: origin.x + dimensions.width * 0.5,
+            y: origin.y + min(max(dimensions.height * 0.28, 90), dimensions.height * 0.5)
+        )
+    }
+
+    private static func fallbackScreenPoint() -> CGPoint? {
+        guard let screen = NSScreen.main else { return nil }
+        return CGPoint(x: screen.frame.midX, y: screen.frame.midY)
+    }
+
+    private static func moveCursor(to point: CGPoint?) {
+        guard let point,
+              let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved,
+                                  mouseCursorPosition: point, mouseButton: .left) else { return }
+        event.post(tap: .cghidEventTap)
     }
 }

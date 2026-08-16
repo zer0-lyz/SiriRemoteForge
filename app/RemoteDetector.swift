@@ -28,10 +28,10 @@ class RemoteDetector {
     private var manager: IOHIDManager?
     private var deviceCallback: ((IOHIDDevice?) -> Void)?
     private var currentDevice: IOHIDDevice?
-    private var connectedDeviceCount = 0
-    // Track devices by vendorID:productID combination
-    // A single physical Siri Remote may expose multiple HID interfaces, but we only want to process one
-    private var processedDeviceKeys: Set<String> = []
+    // A Siri Remote exposes several HID interfaces with the same vendor/product pair. Track the
+    // interfaces themselves so one transient interface removal cannot tear down the other inputs.
+    private var activeDevices: Set<IOHIDDevice> = []
+    private var activeInterfaceCounts: [String: Int] = [:]
     private let processingQueue = DispatchQueue(label: "com.hypervibe.deviceProcessing")
     
     private let appleVendorID: Int = 0x004C
@@ -122,8 +122,10 @@ class RemoteDetector {
             self.manager = nil
         }
         currentDevice = nil
-        processedDeviceKeys.removeAll()
-        connectedDeviceCount = 0
+        processingQueue.sync {
+            activeDevices.removeAll()
+            activeInterfaceCounts.removeAll()
+        }
         deviceCallback?(nil)
     }
     
@@ -177,31 +179,28 @@ class RemoteDetector {
         // but they all share the same vendor and product ID
         let deviceKey = "\(vendorID):\(productID)"
         
-        // Use a serialized queue to prevent race conditions when processing devices
+        // Use a serialized queue to prevent races between interface callbacks.
         processingQueue.async { [weak self] in
             guard let self = self else { return }
-            
-            let shouldLog: Bool
-            if !self.processedDeviceKeys.contains(deviceKey) {
-                // First time seeing this vendor+product combination - log it
-                self.processedDeviceKeys.insert(deviceKey)
-                self.connectedDeviceCount += 1
-                shouldLog = true
-            } else {
-                // Already seen this vendor+product - skip logging but still process the device
-                shouldLog = false
-            }
-            
-            // Always set currentDevice to the latest device (for tracking)
+
+            // Matching callbacks and the initial enumeration can report the same interface twice.
+            // Passing it through once is enough; RemoteInputHandler also de-duplicates defensively.
+            guard self.activeDevices.insert(device).inserted else { return }
+
+            let interfaceCount = (self.activeInterfaceCounts[deviceKey] ?? 0) + 1
+            self.activeInterfaceCounts[deviceKey] = interfaceCount
+            let becameConnected = interfaceCount == 1
             self.currentDevice = device
-            
-            // Only log once per physical device (vendor+product combination)
-            if shouldLog {
+
+            if becameConnected {
                 let productName = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "Unknown"
                 print("✅ Siri Remote connected: \(productName) (Vendor: 0x\(String(vendorID, radix: 16, uppercase: true)), Product: 0x\(String(productID, radix: 16, uppercase: true)))")
             }
-            
-            // Always pass the device to the callback - RemoteInputHandler needs all HID interfaces
+
+            rmDebug(String(format: "🛰 HID interface added usage=0x%X/0x%X active=%d physicalInterfaces=%d",
+                           IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsagePageKey as CFString) as? Int ?? -1,
+                           IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsageKey as CFString) as? Int ?? -1,
+                           self.activeDevices.count, interfaceCount))
             DispatchQueue.main.async {
                 self.deviceCallback?(device)
             }
@@ -222,13 +221,23 @@ class RemoteDetector {
         processingQueue.async { [weak self] in
             guard let self = self else { return }
             
-            // Only process removal if we've seen this device before
-            guard self.processedDeviceKeys.contains(deviceKey) else { return }
-            
-            self.processedDeviceKeys.remove(deviceKey)
-            self.connectedDeviceCount = max(0, self.connectedDeviceCount - 1)
-            
-            if self.connectedDeviceCount == 0 {
+            // A physical remote publishes multiple interfaces. Remove only this interface and keep
+            // the handler alive while any sibling interface remains attached.
+            guard self.activeDevices.remove(device) != nil else { return }
+
+            let remainingForPhysical = max(0, (self.activeInterfaceCounts[deviceKey] ?? 1) - 1)
+            if remainingForPhysical == 0 {
+                self.activeInterfaceCounts.removeValue(forKey: deviceKey)
+            } else {
+                self.activeInterfaceCounts[deviceKey] = remainingForPhysical
+            }
+
+            rmDebug(String(format: "🛰 HID interface removed usage=0x%X/0x%X active=%d physicalInterfaces=%d",
+                           IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsagePageKey as CFString) as? Int ?? -1,
+                           IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsageKey as CFString) as? Int ?? -1,
+                           self.activeDevices.count, remainingForPhysical))
+
+            if self.activeDevices.isEmpty {
                 let productName = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "Unknown"
                 print("❌ Siri Remote disconnected: \(productName)")
                 self.currentDevice = nil

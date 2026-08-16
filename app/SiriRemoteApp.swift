@@ -34,6 +34,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var builtinMicFeeder: BuiltinMicFeeder?
     /// Mirror of the tune flag — the shake→highlight path is gated on this (see `applyTune`).
     private var findCursorEnabled = true
+    /// Bundle ids of the video clients. While one of them runs, holding Siri mutes the system
+    /// output so dictation hears only the user's voice, not the video's audio.
+    private static let videoAppBundleIDs: Set<String> = [
+        "com.tencent.tenvideo", "com.youku.mac", "com.bilibili.bilibiliPC"
+    ]
+    /// Non-nil while Siri is held and the output is muted for dictation; restores on release.
+    private var dictationMuteRestore: (wasMuted: Bool, usedKeyToggle: Bool)?
 
     // Config engine (SiriRemoteCore)
     private var controller: Controller?
@@ -268,11 +275,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.touchHandler?.circularScrollAxis = baseCircularScrollAxis
             }
         }
-        appWatcher = AppWatcher { [weak engineController] bundleID in
-            rmDebug("🎯 frontmost app → \(bundleID)")
-            engineController?.frontmostAppChanged(bundleID: bundleID)
-            activeProfileKey = bundleID
-            baseCircularScrollAxis = .vertical
+        appWatcher = AppWatcher { [weak engineController] profileKey in
+            rmDebug("🎯 frontmost app → \(profileKey)")
+            engineController?.frontmostAppChanged(bundleID: profileKey)
+            activeProfileKey = profileKey
+            baseCircularScrollAxis = Self.seekAxis(forProfileKey: profileKey) ? .seek : .vertical
             applyCircularScrollAxis()
         }
         configWatcher = ConfigFileWatcher(url: ConfigStore.path) { [weak self] in
@@ -290,7 +297,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let key = AppWatcher.profileKey(for: NSWorkspace.shared.frontmostApplication) {
                 self?.controller?.frontmostAppChanged(bundleID: key)
                 activeProfileKey = key
-                baseCircularScrollAxis = .vertical
+                baseCircularScrollAxis = Self.seekAxis(forProfileKey: key) ? .seek : .vertical
                 applyCircularScrollAxis()
             }
             self?.settingsModel?.config = reloaded   // keep the Layout tab in sync on hot-reload
@@ -440,6 +447,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         remoteInputHandler?.onButtonActivity = { [weak self] in
             self?.touchHandler?.tryReconnectTrackpad()
         }
+        remoteInputHandler?.onSiriButtonState = { [weak self] pressed in
+            NativePushToTalk.setEnabled(pressed)
+            if pressed {
+                self?.beginDictationMute()
+            } else {
+                self?.endDictationMute()
+            }
+        }
         
         // Start remote detection
         remoteDetector = RemoteDetector { [weak self] device in
@@ -468,14 +483,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         remoteDetector?.startDetection()
-
-        if CommandLine.arguments.contains("--native-ptt") {
-            // Let all seven IOHID raw-report callbacks attach before the Apple driver starts its
-            // native push-to-talk path. The continuously running process then captures any audio.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                NativePushToTalk.setEnabled(true)
-            }
-        }
 
         if CommandLine.arguments.contains("--direct-ptt") {
             // Wait for all seven virtual interfaces to enumerate, then hold the remote's hidden
@@ -619,9 +626,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             persistTuneToConfig()
         }
 
-        if CommandLine.arguments.contains("--native-ptt") {
-            NativePushToTalk.setEnabled(false)
-        }
+        NativePushToTalk.setEnabled(false)
         if CommandLine.arguments.contains("--direct-ptt") {
             remoteInputHandler?.setDirectPushToTalk(false)
         }
@@ -681,6 +686,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Permissions
+
+    /// While a video client is running, mute the default output during dictation so the remote or
+    /// built-in mic does not pick up the video's audio. Restores the prior state on release.
+    private func beginDictationMute() {
+        guard dictationMuteRestore == nil, Self.anyVideoAppRunning() else { return }
+        if let muted = MediaController.defaultOutputMuted() {
+            if !muted {
+                MediaController.setDefaultOutputMuted(true)
+                dictationMuteRestore = (wasMuted: false, usedKeyToggle: false)
+            } else {
+                // Already muted — remember that so release does not unmute.
+                dictationMuteRestore = (wasMuted: true, usedKeyToggle: false)
+            }
+        } else {
+            // The output device does not expose a mute property; fall back to the media-key toggle.
+            MediaController.shared.sendMediaKey(.mute)
+            dictationMuteRestore = (wasMuted: false, usedKeyToggle: true)
+        }
+    }
+
+    private func endDictationMute() {
+        guard let restore = dictationMuteRestore else { return }
+        dictationMuteRestore = nil
+        if restore.usedKeyToggle {
+            MediaController.shared.sendMediaKey(.mute)
+        } else {
+            MediaController.setDefaultOutputMuted(restore.wasMuted)
+        }
+    }
+
+    private static func anyVideoAppRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains { app in
+            guard let id = app.bundleIdentifier else { return false }
+            return videoAppBundleIDs.contains(id)
+        }
+    }
+
+    /// The touch ring seeks only on a video client's PLAYBACK page (profile key
+    /// "<bundle>:playing"). Browsing/list pages fall back to normal vertical scrolling.
+    private static func seekAxis(forProfileKey key: String) -> Bool {
+        guard key.hasSuffix(":playing") else { return false }
+        let baseID = key.split(separator: ":").first.map(String.init) ?? key
+        return videoAppBundleIDs.contains(baseID)
+    }
     
     private func checkAccessibilityPermissions() {
         // macOS will show its own prompt when needed

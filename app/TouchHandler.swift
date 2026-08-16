@@ -20,6 +20,10 @@ enum SwipeDirection: String, CaseIterable {
 enum CircularScrollAxis {
     case vertical
     case horizontal
+    case textSelection
+    /// Video playback: rotation emits Left/Right direction keys so the ring seeks the video
+    /// instead of scrolling (Apple TV-style). Pixels accumulate into seek steps.
+    case seek
 }
 
 private func touchCallback(device: MTDevice?,
@@ -126,8 +130,20 @@ class TouchHandler {
     /// established Layer 0 vertical path. This is a small final-output speed adjustment only;
     /// both layers still share the exact acceleration curve calculated upstream.
     private let layer1HorizontalSpeedScale: Double = 1.3
+    private let textSelectionPixelsPerStep: Double = 34
+    private let textSelectionMaxStepsPerFrame = 8
     /// Sub-pixel accumulator so smooth continuous rotation emits whole scroll pixels as they add up.
     private var scrollRemainder: Double = 0
+    /// Pixels of rotation that produce one seek step (one Left/Right key). With the default
+    /// pixels-per-radian, a full ring turn is ~471px ≈ 7 seek steps.
+    private let seekPixelsPerStep: Double = 60
+    /// Minimum interval between emitted seek steps. Electron video players (Bilibili, etc.) step
+    /// ~5s per direction key; a fixed ~0.22s cadence reads as continuous seeking instead of a
+    /// burst of down/up pairs that the renderer partially swallows.
+    private let seekMinStepInterval: CFTimeInterval = 0.22
+    /// Seek steps queued by rotation but not yet emitted (throttled by the interval above).
+    private var pendingSeekSteps = 0
+    private var lastSeekStepTime: CFTimeInterval = 0
     /// Press-to-click freeze: pressing to click makes contact (zTotal) spike upward. A per-frame
     /// rise above this threshold = a press starting → freeze the cursor for a short window so the
     /// press/release doesn't drift the pointer.
@@ -505,6 +521,8 @@ class TouchHandler {
             circularScrollPhaseStarted = false
             activeCircularScrollAxis = nil
             scrollRemainder = 0
+            pendingSeekSteps = 0
+            lastSeekStepTime = 0
             rotationTotal = 0
             scrollEmitted = 0
             lastContact = contactSize
@@ -642,6 +660,8 @@ class TouchHandler {
             endCircularScrollGestureIfNeeded()
             didScroll = false
             circularActive = false
+            pendingSeekSteps = 0
+            lastSeekStepTime = 0
             return
         }
 
@@ -745,6 +765,37 @@ class TouchHandler {
     private func emitCircularScroll(pixels: Double) {
         let axis = activeCircularScrollAxis ?? circularScrollAxis
         let outputScale = axis == .horizontal ? layer1HorizontalSpeedScale : 1.0
+        if axis == .seek {
+            scrollRemainder += pixels
+            pendingSeekSteps += Int(scrollRemainder / seekPixelsPerStep)
+            scrollRemainder = scrollRemainder.truncatingRemainder(dividingBy: seekPixelsPerStep)
+            let now = CACurrentMediaTime()
+            guard pendingSeekSteps != 0, now - lastSeekStepTime >= seekMinStepInterval else {
+                return
+            }
+            let direction = pendingSeekSteps > 0 ? 1 : -1
+            pendingSeekSteps -= direction
+            lastSeekStepTime = now
+            let key = direction > 0 ? "right" : "left"
+            let pending = pendingSeekSteps
+            rmDebug(String(format: "🎞 seek %@ pending=%d", direction > 0 ? "→" : "←", pending))
+            DispatchQueue.main.async { Keys.synthesize(key) }
+            return
+        }
+        if axis == .textSelection {
+            scrollRemainder += pixels
+            var steps = Int(scrollRemainder / textSelectionPixelsPerStep)
+            steps = max(-textSelectionMaxStepsPerFrame, min(textSelectionMaxStepsPerFrame, steps))
+            guard steps != 0 else { return }
+            scrollRemainder -= Double(steps) * textSelectionPixelsPerStep
+            let keys = steps > 0 ? "shift+right" : "shift+left"
+            DispatchQueue.main.async {
+                for _ in 0..<abs(steps) {
+                    Keys.synthesizeFlagged(keys)
+                }
+            }
+            return
+        }
         scrollRemainder += pixels * outputScale
         let whole = scrollRemainder.rounded(.towardZero)
         guard whole != 0 else { return }
@@ -769,6 +820,10 @@ class TouchHandler {
                 // shared acceleration/easing value (`delta`) itself remains unchanged.
                 self?.cursorController.scrollContinuousHorizontal(deltaX: -delta, phase: phase)
             }
+        case .textSelection:
+            break
+        case .seek:
+            break
         }
     }
 
